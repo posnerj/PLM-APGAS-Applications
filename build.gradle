@@ -1,0 +1,62 @@
+group 'PLM-APGAS-Examples'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+apply plugin: 'idea'
+apply plugin: 'eclipse'
+
+sourceCompatibility = 10
+targetCompatibility = 10
+
+subprojects {
+    buildscript {
+        repositories {
+            mavenCentral()
+        }
+    }
+}
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile project(':apgas')
+    compile group: 'commons-cli', name: 'commons-cli', version: '1.3'
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ["src"]
+        }
+    }
+}
+
+task copyToLib << {
+    delete fileTree(dir: "lib")
+    [ 'compile','runtime','testCompile' ].each { mode ->
+        copy {
+            from configurations.getByName(mode).files
+            into 'lib'
+        }
+    }
+}
+
+task copyToBin(type: Copy) {
+    delete fileTree(dir: "bin")
+    from "${buildDir}/classes/java/main"
+    into "bin"
+}
+
+
+build.finalizedBy(copyToLib)
+build.finalizedBy(copyToBin)
+copyToLib.dependsOn(build)
+copyToBin.dependsOn(build)

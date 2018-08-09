@@ -1,0 +1,2 @@
+include ':apgas'
+project( ':apgas' ).projectDir = new File(settingsDir, 'apgas' )
