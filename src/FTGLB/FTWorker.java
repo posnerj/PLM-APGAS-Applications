@@ -193,6 +193,7 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
     this.waitingForPutWorking = new AtomicBoolean(false);
     this.currentLid = Long.MIN_VALUE;
     this.currentLid++;
+    this.logger = new FTLogger(s);
 
     // only used on place 0
     this.workingPlaces = new HashMap<>();
@@ -263,6 +264,7 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
     this.hz.getConfig().addMapConfig(backupMapConfig);
 
     this.iMapBackup = hz.getMap(this.backupMapName);
+    this.logger.regularBackupsWritten++;
 
     this.iMapBackupHandlerRemoveID =
         this.iMapBackup.addPartitionLostListener(
@@ -303,7 +305,6 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
         }
       }
     }
-    this.logger = new FTLogger(s);
     this.waitingPlace = -1;
     this.deadPlaces = new ArrayList<>();
     GlobalRuntime.getRuntime().setPlaceFailureHandler(this::placeFailureHandler);
@@ -533,9 +534,9 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
 
             if (isDead(thiefOfDeadPlace)) {
               if (this.iMapBackup
-                          .get(getBackupKey(thiefOfDeadPlaceID))
-                          .getReceivedLid(iteratorDeadPlaceID)
-                      >= deadLid
+                  .get(getBackupKey(thiefOfDeadPlaceID))
+                  .getReceivedLid(iteratorDeadPlaceID)
+                  >= deadLid
                   || this.iMapBackup.get(getBackupKey(iteratorDeadPlaceID)).getMyLid() < deadLid) {
                 deadPlaceOpenLoot.put(thiefOfDeadPlaceID, null);
                 this.iMapOpenLoot.set(getBackupKey(iteratorDeadPlaceID), deadPlaceOpenLoot);
@@ -598,11 +599,11 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
                 t.printStackTrace(System.out);
 
                 if (this.iMapBackup
-                            .get(getBackupKey(thiefOfDeadPlaceID))
-                            .getReceivedLid(iteratorDeadPlaceID)
-                        >= deadLid
+                    .get(getBackupKey(thiefOfDeadPlaceID))
+                    .getReceivedLid(iteratorDeadPlaceID)
+                    >= deadLid
                     || this.iMapBackup.get(getBackupKey(iteratorDeadPlaceID)).getMyLid()
-                        < deadLid) {
+                    < deadLid) {
                   deadPlaceOpenLoot.put(thiefOfDeadPlaceID, null);
                   this.iMapOpenLoot.set(getBackupKey(iteratorDeadPlaceID), deadPlaceOpenLoot);
                 } else {
@@ -1209,8 +1210,8 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
    */
   private void processStack() {
     if (((here().id == 0)
-            && (this.queue.count() == 1)
-            && (this.workingPlaces.get(here().id) == true))
+        && (this.queue.count() == 1)
+        && (this.workingPlaces.get(here().id) == true))
         == false) {
       this.putWorkingPlaces(here(), true);
     }

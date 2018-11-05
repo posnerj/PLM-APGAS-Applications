@@ -190,6 +190,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
     this.waitingForPutWorking = new AtomicBoolean(false);
     this.currentLid = Long.MIN_VALUE;
     this.currentLid++;
+    this.logger = new IncFTLogger(s);
 
     this.crashNumber = crashNumber;
 
@@ -282,6 +283,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
     this.queueWrapper = new IncQueueWrapper<Queue, T>(queue, startPlacesSize);
 
     this.iMapBackup.set(getBackupKey(here().id), this.queueWrapper);
+    this.logger.regularBackupsWritten++;
     takeSnapshot();
     lastSnapTasks = snap.minS + snap.taskA.size();
 
@@ -305,7 +307,6 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
         }
       }
     }
-    this.logger = new IncFTLogger(s);
     this.waitingPlace = -1;
     this.deadPlaces = new ArrayList<>();
     GlobalRuntime.getRuntime().setPlaceFailureHandler(this::placeFailureHandler);
@@ -611,9 +612,9 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
             if (isDead(thiefOfDeadPlace)) {
               this.consolePrinter.println("Thief " + thiefOfDeadPlace + " is dead!");
               if (this.iMapBackup
-                          .get(getBackupKey(thiefOfDeadPlaceID))
-                          .getReceivedLid(iteratorDeadPlaceID)
-                      >= deadLid
+                  .get(getBackupKey(thiefOfDeadPlaceID))
+                  .getReceivedLid(iteratorDeadPlaceID)
+                  >= deadLid
                   || this.iMapBackup.get(getBackupKey(iteratorDeadPlaceID)).getMyLid() < deadLid) {
                 this.consolePrinter.println("OpenLoot is already merged into backup!");
                 deadPlaceOpenLoot.put(thiefOfDeadPlaceID, null);
@@ -700,11 +701,11 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
                 crashPlace(7, 1, 0, thiefOfDeadPlace.id, deadLid);
 
                 if (this.iMapBackup
-                            .get(getBackupKey(thiefOfDeadPlaceID))
-                            .getReceivedLid(iteratorDeadPlaceID)
-                        >= deadLid
+                    .get(getBackupKey(thiefOfDeadPlaceID))
+                    .getReceivedLid(iteratorDeadPlaceID)
+                    >= deadLid
                     || this.iMapBackup.get(getBackupKey(iteratorDeadPlaceID)).getMyLid()
-                        < deadLid) {
+                    < deadLid) {
                   this.consolePrinter.println("OpenLoot is already merged into backup!");
                   deadPlaceOpenLoot.put(thiefOfDeadPlaceID, null);
                   this.iMapOpenLoot.set(getBackupKey(iteratorDeadPlaceID), deadPlaceOpenLoot);
@@ -1500,8 +1501,8 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
     this.consolePrinter.println("begin");
 
     if (((here().id == 0)
-            && (this.queue.count() == 1)
-            && (this.workingPlaces.get(here().id) == true))
+        && (this.queue.count() == 1)
+        && (this.workingPlaces.get(here().id) == true))
         == false) {
       this.putWorkingPlaces(here(), true);
     }
