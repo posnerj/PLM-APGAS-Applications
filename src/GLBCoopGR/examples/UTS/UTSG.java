@@ -1,9 +1,9 @@
-package GLBCoop.examples.NQueens;
+package GLBCoopGR.examples.UTS;
 
 import static apgas.Constructs.places;
 
-import GLBCoop.GLBCoop;
-import GLBCoop.GLBParameters;
+import GLBCoopGR.GLBCoopGR;
+import GLBCoopGR.GLBParametersGR;
 import apgas.Configuration;
 import apgas.SerializableCallable;
 import org.apache.commons.cli.CommandLine;
@@ -12,7 +12,7 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
-public class NQueensG {
+public class UTSG {
 
   static final int COUNT_PLACES = 4;
   static final int COUNT_THREADS = 16;
@@ -20,8 +20,9 @@ public class NQueensG {
   public static Long[] compute(String[] args) throws ParseException {
     Options options = new Options();
 
-    options.addOption("s", true, "Size of NQueens");
-    options.addOption("t", true, "Threshold");
+    options.addOption("b", true, "Branching factor");
+    options.addOption("r", true, "Seed (0 <= r < 2^31)");
+    options.addOption("d", true, "Tree depth");
     options.addOption("n", true, "Number of nodes to process before probing. Default 511.");
     options.addOption("w", true, "Number of thieves to send out. Default 1.");
     options.addOption("l", true, "Base of the lifeline");
@@ -35,12 +36,13 @@ public class NQueensG {
     CommandLineParser parser = new DefaultParser();
     CommandLine cmd = parser.parse(options, args);
 
-    int s = Integer.parseInt(cmd.getOptionValue("s", "13"));
-    int t = Integer.parseInt(cmd.getOptionValue("t", "10"));
-
+    int b = Integer.parseInt(cmd.getOptionValue("b", "4"));
+    int r = Integer.parseInt(cmd.getOptionValue("r", "19"));
+    int d = Integer.parseInt(cmd.getOptionValue("d", "13"));
     int n = Integer.parseInt(cmd.getOptionValue("n", "511"));
     int l = Integer.parseInt(cmd.getOptionValue("l", "32"));
     int m = Integer.parseInt(cmd.getOptionValue("m", "1024"));
+    //        int g = Integer.parseInt(cmd.getOptionValue("g", "128"));
     int timestamps = Integer.parseInt(cmd.getOptionValue("timestamps", "0"));
 
     if (System.getProperty(Configuration.APGAS_PLACES) == null) {
@@ -54,7 +56,7 @@ public class NQueensG {
     sysThreads = System.getProperty(Configuration.APGAS_THREADS);
 
     int verbose =
-        Integer.parseInt(cmd.getOptionValue("v", String.valueOf(GLBParameters.SHOW_RESULT_FLAG)));
+        Integer.parseInt(cmd.getOptionValue("v", String.valueOf(GLBParametersGR.SHOW_RESULT_FLAG)));
     int numPlaces = places().size();
 
     int z0 = 1;
@@ -71,10 +73,12 @@ public class NQueensG {
     System.out.println(
         "places = "
             + numPlaces
-            + "   s = "
-            + s
-            + "   t = "
-            + t
+            + "   b = "
+            + b
+            + "   r = "
+            + r
+            + "   d = "
+            + d
             + "   w = "
             + w
             + "   n = "
@@ -85,6 +89,7 @@ public class NQueensG {
             + m
             + "   z = "
             + z
+            //                + "   g = " + g
             + "   v = "
             + verbose
             + "   timestamps = "
@@ -92,19 +97,18 @@ public class NQueensG {
             + "   sysThreads = "
             + sysThreads);
 
-    SerializableCallable<Queue> init = () -> new Queue(s, t);
+    SerializableCallable<QueueGR> init = () -> new QueueGR(b, numPlaces);
+    GLBParametersGR glbPara = new GLBParametersGR(n, w, l, z, m, verbose, timestamps, numPlaces);
+    GLBCoopGR<QueueGR, Long> glb = new GLBCoopGR<QueueGR, Long>(init, glbPara, true);
 
-    GLBParameters glbPara = new GLBParameters(n, w, l, z, m, verbose, timestamps, numPlaces);
-    GLBCoop<Queue, Long> glb = new GLBCoop<Queue, Long>(init, glbPara, true);
-
-    Runnable start = () -> glb.getTaskQueue().init();
+    Runnable start = () -> glb.getTaskQueue().init(r, d);
 
     Long[] result = glb.run(start);
     return result;
   }
 
   public static void main(String[] args) {
-    System.out.println(NQueensG.class.getName() + " starts");
+    System.out.println(UTSG.class.getName() + " starts");
     Long[] result = new Long[0];
     try {
       result = compute(args);

@@ -1,9 +1,9 @@
-package GLBCoop.examples.NQueens;
+package GLBCoopGR.examples.NQueens;
 
 import static apgas.Constructs.places;
 
-import GLBCoop.GLBCoop;
-import GLBCoop.GLBParameters;
+import GLBCoopGR.GLBCoopGR;
+import GLBCoopGR.GLBParametersGR;
 import apgas.Configuration;
 import apgas.SerializableCallable;
 import org.apache.commons.cli.CommandLine;
@@ -54,7 +54,7 @@ public class NQueensG {
     sysThreads = System.getProperty(Configuration.APGAS_THREADS);
 
     int verbose =
-        Integer.parseInt(cmd.getOptionValue("v", String.valueOf(GLBParameters.SHOW_RESULT_FLAG)));
+        Integer.parseInt(cmd.getOptionValue("v", String.valueOf(GLBParametersGR.SHOW_RESULT_FLAG)));
     int numPlaces = places().size();
 
     int z0 = 1;
@@ -92,10 +92,11 @@ public class NQueensG {
             + "   sysThreads = "
             + sysThreads);
 
-    SerializableCallable<Queue> init = () -> new Queue(s, t);
 
-    GLBParameters glbPara = new GLBParameters(n, w, l, z, m, verbose, timestamps, numPlaces);
-    GLBCoop<Queue, Long> glb = new GLBCoop<Queue, Long>(init, glbPara, true);
+    SerializableCallable<QueueGR> init = () -> new QueueGR(s, t);
+
+    GLBParametersGR glbPara = new GLBParametersGR(n, w, l, z, m, verbose, timestamps, numPlaces);
+    GLBCoopGR<QueueGR, Long> glb = new GLBCoopGR<QueueGR, Long>(init, glbPara, true);
 
     Runnable start = () -> glb.getTaskQueue().init();
 

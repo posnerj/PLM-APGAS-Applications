@@ -1,9 +1,9 @@
-package GLBCoop.examples.BCOneQueue;
+package GLBCoopGR.examples.BCOneQueue;
 
 import static apgas.Constructs.places;
 
-import GLBCoop.GLBCoop;
-import GLBCoop.GLBParameters;
+import GLBCoopGR.GLBCoopGR;
+import GLBCoopGR.GLBParametersGR;
 import apgas.Configuration;
 import apgas.SerializableCallable;
 import apgas.impl.Config;
@@ -67,7 +67,7 @@ public class BCG {
     System.setProperty(Config.APGAS_SERIALIZATION, "java");
 
     int verbose =
-        Integer.parseInt(cmd.getOptionValue("v", String.valueOf(GLBParameters.SHOW_RESULT_FLAG)));
+        Integer.parseInt(cmd.getOptionValue("v", String.valueOf(GLBParametersGR.SHOW_RESULT_FLAG)));
 
     int numPlaces = places().size();
 
@@ -118,11 +118,11 @@ public class BCG {
             + ", places = "
             + numPlaces);
 
-    SerializableCallable<Queue> init =
-        () -> new Queue(new Rmat(seed, n, a, b, c, d), permute, numPlaces);
+    SerializableCallable<QueueGR> init =
+        () -> new QueueGR(new Rmat(seed, n, a, b, c, d), permute, numPlaces);
 
-    GLBParameters glbPara = new GLBParameters(g, w, l, z, m, verbose, timestamps, numPlaces);
-    GLBCoop<Queue, Double> glb = new GLBCoop<Queue, Double>(init, glbPara, false);
+    GLBParametersGR glbPara = new GLBParametersGR(g, w, l, z, m, verbose, timestamps, numPlaces);
+    GLBCoopGR<QueueGR, Double> glb = new GLBCoopGR<QueueGR, Double>(init, glbPara, false);
 
     Double[] result = glb.runParallel();
     return result;

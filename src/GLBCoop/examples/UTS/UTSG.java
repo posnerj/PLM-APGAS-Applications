@@ -29,8 +29,6 @@ public class UTSG {
     options.addOption("m", true, "Max potential victims");
     options.addOption("v", true, "Verbose. Default 0 (no).");
     options.addOption(
-        "k", true, " Write cyclic backups every k * n computation-elements. Default: 2048");
-    options.addOption(
         "timestamps",
         true,
         "count of timestamps for logging, 0=disabled, 500 = recommanded, default ist 0");
@@ -44,8 +42,6 @@ public class UTSG {
     int n = Integer.parseInt(cmd.getOptionValue("n", "511"));
     int l = Integer.parseInt(cmd.getOptionValue("l", "32"));
     int m = Integer.parseInt(cmd.getOptionValue("m", "1024"));
-    int k = Integer.parseInt(cmd.getOptionValue("k", "2048"));
-    //        int g = Integer.parseInt(cmd.getOptionValue("g", "128"));
     int timestamps = Integer.parseInt(cmd.getOptionValue("timestamps", "0"));
 
     if (System.getProperty(Configuration.APGAS_PLACES) == null) {
@@ -92,8 +88,6 @@ public class UTSG {
             + m
             + "   z = "
             + z
-            + "   k = "
-            + k
             //                + "   g = " + g
             + "   v = "
             + verbose

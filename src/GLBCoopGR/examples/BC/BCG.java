@@ -1,12 +1,11 @@
-package GLBCoop.examples.BCOneQueue;
+package GLBCoopGR.examples.BC;
 
 import static apgas.Constructs.places;
 
-import GLBCoop.GLBCoop;
-import GLBCoop.GLBParameters;
+import GLBCoopGR.GLBCoopGR;
+import GLBCoopGR.GLBParametersGR;
 import apgas.Configuration;
 import apgas.SerializableCallable;
-import apgas.impl.Config;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -32,26 +31,27 @@ public class BCG {
     options.addOption("w", true, "Number of thieves to send out Default 1.");
     options.addOption("l", true, "Base of the lifeline");
     options.addOption("m", true, "Max potential victims");
+    //        options.addOption("r", true, "Monitor-Cycles");
+    options.addOption("k", true, "Backup-Cycles");
     options.addOption("v", true, "Verbose");
     options.addOption(
         "timestamps",
         true,
-        "count of timestamps for logging, 0=disabled, 500 = recommanded, default is 0");
+        "count of timestamps for logging, 0=disabled, 500 = recommanded, default ist 0");
 
     CommandLineParser parser = new DefaultParser();
     CommandLine cmd = parser.parse(options, args);
 
     int seed = Integer.parseInt(cmd.getOptionValue("s", "2"));
-    int n = Integer.parseInt(cmd.getOptionValue("n", "14")); // 2
+    int n = Integer.parseInt(cmd.getOptionValue("n", "13")); // 2
     double a = Double.parseDouble(cmd.getOptionValue("a", "0.55"));
     double b = Double.parseDouble(cmd.getOptionValue("b", "0.1"));
     double c = Double.parseDouble(cmd.getOptionValue("c", "0.1"));
     double d = Double.parseDouble(cmd.getOptionValue("d", "0.25"));
     int permute = Integer.parseInt(cmd.getOptionValue("p", "1"));
-    int g = Integer.parseInt(cmd.getOptionValue("g", "127"));
+    int g = Integer.parseInt(cmd.getOptionValue("g", "511"));
     int l = Integer.parseInt(cmd.getOptionValue("l", "32"));
     int m = Integer.parseInt(cmd.getOptionValue("m", "1024"));
-
     int timestamps = Integer.parseInt(cmd.getOptionValue("timestamps", "0"));
 
     if (System.getProperty(Configuration.APGAS_PLACES) == null) {
@@ -64,10 +64,8 @@ public class BCG {
     }
     sysThreads = System.getProperty(Configuration.APGAS_THREADS);
 
-    System.setProperty(Config.APGAS_SERIALIZATION, "java");
-
     int verbose =
-        Integer.parseInt(cmd.getOptionValue("v", String.valueOf(GLBParameters.SHOW_RESULT_FLAG)));
+        Integer.parseInt(cmd.getOptionValue("v", String.valueOf(GLBParametersGR.SHOW_RESULT_FLAG)));
 
     int numPlaces = places().size();
 
@@ -101,6 +99,11 @@ public class BCG {
             + "   sysThreads = "
             + sysThreads);
 
+    Boolean propertyApgasRes = Boolean.valueOf(System.getProperty(Configuration.APGAS_RESILIENT));
+    if (propertyApgasRes == null || propertyApgasRes.equals("false")) {
+      System.out.println("Warning: APGAS_RESILIENT is disabled!!!!");
+    }
+
     System.out.println("Running BC with the following parameters:");
     System.out.println(
         "seed = "
@@ -118,11 +121,11 @@ public class BCG {
             + ", places = "
             + numPlaces);
 
-    SerializableCallable<Queue> init =
-        () -> new Queue(new Rmat(seed, n, a, b, c, d), permute, numPlaces);
+    SerializableCallable<QueueGR> init =
+        () -> new QueueGR(new Rmat(seed, n, a, b, c, d), permute, numPlaces);
 
-    GLBParameters glbPara = new GLBParameters(g, w, l, z, m, verbose, timestamps, numPlaces);
-    GLBCoop<Queue, Double> glb = new GLBCoop<Queue, Double>(init, glbPara, false);
+    GLBParametersGR glbPara = new GLBParametersGR(g, w, l, z, m, verbose, timestamps, numPlaces);
+    GLBCoopGR<QueueGR, Double> glb = new GLBCoopGR<QueueGR, Double>(init, glbPara, false);
 
     Double[] result = glb.runParallel();
     return result;

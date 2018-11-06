@@ -32,7 +32,6 @@ public class BCG {
     options.addOption("l", true, "Base of the lifeline");
     options.addOption("m", true, "Max potential victims");
     //        options.addOption("r", true, "Monitor-Cycles");
-    options.addOption("k", true, "Backup-Cycles");
     options.addOption("v", true, "Verbose");
     options.addOption(
         "timestamps",
@@ -99,10 +98,6 @@ public class BCG {
             + "   sysThreads = "
             + sysThreads);
 
-    Boolean propertyApgasRes = Boolean.valueOf(System.getProperty(Configuration.APGAS_RESILIENT));
-    if (propertyApgasRes == null || propertyApgasRes.equals("false")) {
-      System.out.println("Warning: APGAS_RESILIENT is disabled!!!!");
-    }
 
     System.out.println("Running BC with the following parameters:");
     System.out.println(

@@ -1,4 +1,4 @@
-package GLBCoop;
+package GLBCoopGR;
 
 import static apgas.Constructs.asyncAt;
 import static apgas.Constructs.finish;
@@ -8,7 +8,7 @@ import static apgas.Constructs.places;
 import static apgas.Constructs.uncountedAsyncAt;
 
 import apgas.SerializableCallable;
-import apgas.util.PlaceLocalObject;
+import apgas.util.GlobalRef;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Random;
@@ -17,15 +17,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import utils.ConsolePrinter;
 
 /**
- * The local runner for the Cooperative.GLBCoop framework. An instance of this class runs at each
+ * The local runner for the Cooperative.GLBCoopGR framework. An instance of this class runs at each
  * place and provides the context within which user-specified tasks execute and are load balanced
  * across all places.
  *
- * @param <Queue> Concrete TaskQueue type
+ * @param <Queue> Concrete TaskQueueGR type
  * @param <T> Result type.
  */
-public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializable> extends
-    PlaceLocalObject implements Serializable {
+public final class WorkerGR<Queue extends TaskQueueGR<Queue, T>, T extends Serializable>
+    implements Serializable {
 
   private static final long serialVersionUID = 1L;
 
@@ -33,30 +33,19 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
   final transient AtomicBoolean empty = new AtomicBoolean(true);
   final transient AtomicBoolean waiting = new AtomicBoolean(false);
 
-  /**
-   * Number of places.
-   */
+  /** Number of places. */
   final int P;
-  /**
-   * TaskQueue, responsible for crunching numbers
-   */
+  /** TaskQueueGR, responsible for crunching numbers */
   Queue queue;
-  /**
-   * Read as I am the "lifeline buddy" of my "lifelineThieves"
-   */
+  /** Read as I am the "lifeline buddy" of my "lifelineThieves" */
   ConcurrentLinkedQueue<Integer> lifelineThieves;
-  /**
-   * Thieves that send stealing requests
-   */
+  /** Thieves that send stealing requests */
   FixedSizeStack<Integer> thieves;
-  /**
-   * Lifeline buddies
-   */
+  /** Lifeline buddies */
   int[] lifelines;
   /**
    * The data structure to keep a key invariant: At any time, at most one message has been sent on
-   * an outgoing lifeline (and hence at most one message has been received on an incoming
-   * lifeline).
+   * an outgoing lifeline (and hence at most one message has been received on an incoming lifeline).
    */
   boolean[] lifelinesActivated;
   /**
@@ -65,13 +54,9 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
    * the other hand, less focused on computation
    */
   int n;
-  /**
-   * Number of random victims to probe before sending requests to lifeline buddy
-   */
+  /** Number of random victims to probe before sending requests to lifeline buddy */
   int w;
-  /**
-   * Maximum number of random victims
-   */
+  /** Maximum number of random victims */
   int m;
   /**
    * Random number, used when picking a non-lifeline victim/buddy. Important to seed with place id,
@@ -83,10 +68,8 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
    * responds it starts to probe its lifeline buddies
    */
   int[] victims;
-  /**
-   * Logger to record the work-stealing status
-   */
-  Logger logger;
+  /** LoggerGR to record the work-stealing status */
+  LoggerGR loggerGR;
   /*
    * printing some helpful output for debugging, default is false
    */
@@ -95,17 +78,17 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
   /**
    * Class constructor
    *
-   * @param init function closure to init the local {@link TaskQueue}
+   * @param init function closure to init the local {@link TaskQueueGR}
    * @param n same to this.n
    * @param w same to this.w
    * @param m same to this.m
    * @param l power of lifeline graph
    * @param z base of lifeline graph
    * @param tree true if the workload is dynamically generated, false if the workload can be
-   * statically generated
-   * @param s true if stopping Time in Logger, false if not
+   *     statically generated
+   * @param s true if stopping Time in LoggerGR, false if not
    */
-  public Worker(
+  public WorkerGR(
       SerializableCallable<Queue> init,
       int n,
       int w,
@@ -130,8 +113,7 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
     victims = new int[m];
     if (P > 1) {
       for (int i = 0; i < m; i++) {
-        while ((victims[i] = random.nextInt(P)) == h) {
-        }
+        while ((victims[i] = random.nextInt(P)) == h) {}
       }
     }
 
@@ -174,21 +156,23 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
       }
     }
 
-    logger = new Logger(s);
+    loggerGR = new LoggerGR(s);
   }
 
   /**
-   * Internal method used by {@link GLBCoop} to start FTWorker at each place when the workload is
+   * Internal method used by {@link GLBCoopGR} to start FTWorker at each place when the workload is
    * known statically.
+   *
+   * @param globalRef GlobalRef of FTWorker
    */
-  static <Queue extends TaskQueue<Queue, T>, T extends Serializable> void broadcast(
-      Worker<Queue, T> worker) {
+  static <Queue extends TaskQueueGR<Queue, T>, T extends Serializable> void broadcast(
+      GlobalRef<WorkerGR<Queue, T>> globalRef) {
     int size = places().size();
     finish(
         () -> {
           if (size < 256) {
             for (int i = 0; i < size; i++) {
-              asyncAt(place(i), worker::main);
+              asyncAt(place(i), () -> globalRef.get().main(globalRef));
             }
           } else {
             for (int i = size - 1; i >= 0; i -= 32) {
@@ -198,7 +182,7 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
                     int max = here().id;
                     int min = Math.max(max - 31, 0);
                     for (int j = min; j <= max; ++j) {
-                      asyncAt(place(j), worker::main);
+                      asyncAt(place(j), () -> globalRef.get().main(globalRef));
                     }
                   });
             }
@@ -245,101 +229,119 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
    * uses async (instead of uncounted async as in other places), which means when only all lifeline
    * requests are responded can the framework be terminated.
    *
+   * @param globalRef place local handle of LJR
    * @param loot the taskbag(aka workload) to send out
    */
-  public void give(TaskBag loot) {
+  public void give(GlobalRef<WorkerGR<Queue, T>> globalRef, TaskBagGR loot) {
     int victim = here().id;
-    logger.nodesGiven += loot.size();
+    loggerGR.nodesGiven += loot.size();
     if (thieves.getSize() > 0) {
       final int thief = thieves.pop();
       consolePrinter.println(here() + ": Giving loot to " + thief);
       if (thief >= 0) {
-        ++logger.lifelineStealsSuffered;
+        ++loggerGR.lifelineStealsSuffered;
         uncountedAsyncAt(
             place(thief),
             () -> {
-//              int newId = this.logger.startStoppingTime(Logger.STEALING);
-              synchronized (this.waiting) {
-                deal(loot, victim);
+              //                    int newId =
+              // globalRef.get().loggerGR.startStoppingTime(LoggerGR.STEALING);
+              synchronized (globalRef.get().waiting) {
+                globalRef.get().deal(globalRef, loot, victim);
 
-                this.consolePrinter
+                globalRef
+                    .get()
+                    .consolePrinter
                     .println(
                         here()
                             + "(in give1): trying to enter synchronized. active = "
-                            + this.active.get()
+                            + globalRef.get().active.get()
                             + "(should be true)");
 
-                this.consolePrinter
+                globalRef
+                    .get()
+                    .consolePrinter
                     .println(here() + "(in give1): entered synchronized.");
-                this.waiting.set(false);
-                this.waiting.notifyAll();
-//                this.logger.endStoppingTime(newId);
+                globalRef.get().waiting.set(false);
+                globalRef.get().waiting.notifyAll();
+                //                        globalRef.get().loggerGR.endStoppingTime(newId);
               }
             });
       } else {
-        ++logger.stealsSuffered;
+        ++loggerGR.stealsSuffered;
         uncountedAsyncAt(
             place(-thief - 1),
             () -> {
-//              int newId = this.logger.startStoppingTime(Logger.STEALING);
-              synchronized (this.waiting) {
-                deal(loot, -1);
+              //                    int newId =
+              // globalRef.get().loggerGR.startStoppingTime(LoggerGR.STEALING);
+              synchronized (globalRef.get().waiting) {
+                globalRef.get().deal(globalRef, loot, -1);
 
-                this.consolePrinter
+                globalRef
+                    .get()
+                    .consolePrinter
                     .println(
                         here()
                             + "(in give2): trying to enter synchronized. active = "
-                            + this.active.get()
+                            + globalRef.get().active.get()
                             + "(should be true)");
 
-                this.consolePrinter
+                globalRef
+                    .get()
+                    .consolePrinter
                     .println(here() + "(in give2): entered synchronized.");
-                this.waiting.set(false);
-                this.waiting.notifyAll();
-//                this.logger.endStoppingTime(newId);
+                globalRef.get().waiting.set(false);
+                globalRef.get().waiting.notifyAll();
+                //                        globalRef.get().loggerGR.endStoppingTime(newId);
               }
             });
       }
     } else {
-      ++logger.lifelineStealsSuffered;
+      ++loggerGR.lifelineStealsSuffered;
       int thief = lifelineThieves.poll();
 
       asyncAt(
           place(thief),
           () -> {
-//            this.logger.startStoppingTimeWithAutomaticEnd(Logger.STEALING);
-            this.consolePrinter
+            //
+            // globalRef.get().loggerGR.startStoppingTimeWithAutomaticEnd(LoggerGR.STEALING);
+            globalRef
+                .get()
+                .consolePrinter
                 .println(
                     here()
                         + "(in give3): active = "
-                        + this.active.get()
+                        + globalRef.get().active.get()
                         + "(can be both)");
-            deal(loot, victim);
+            globalRef.get().deal(globalRef, loot, victim);
           });
     }
   }
 
   /**
-   * Distribute works to (lifeline) thieves by calling the {@link #give(TaskBag)}
+   * Distribute works to (lifeline) thieves by calling the {@link #give(GlobalRef, TaskBagGR)}
+   *
+   * @param globalRef GlobalRef of FTWorker
    */
-  public void distribute() {
+  public void distribute(GlobalRef<WorkerGR<Queue, T>> globalRef) {
     if (thieves.getSize() + lifelineThieves.size() > 0) {
-      //            logger.startStoppingTimeWithAutomaticEnd(Logger.DISTRIBUTING);
-      logger.startStoppingTimeWithAutomaticEnd(Logger.COMMUNICATION);
+      //            loggerGR.startStoppingTimeWithAutomaticEnd(LoggerGR.DISTRIBUTING);
+      loggerGR.startStoppingTimeWithAutomaticEnd(LoggerGR.COMMUNICATION);
     }
-    TaskBag loot;
+    TaskBagGR loot;
     while (((thieves.getSize() > 0) || (lifelineThieves.size() > 0))
         && (loot = queue.split()) != null) {
-      give(loot);
+      give(globalRef, loot);
     }
   }
 
   /**
    * Rejecting thieves when no task to share (or worth sharing). Note, never reject lifeline thief,
    * instead put it into the lifelineThieves stack,
+   *
+   * @param globalRef GlobalRef of FTWorker
    */
-  public void reject() {
-    this.logger.startStoppingTimeWithAutomaticEnd(Logger.COMMUNICATION);
+  public void reject(GlobalRef<WorkerGR<Queue, T>> globalRef) {
+    this.loggerGR.startStoppingTimeWithAutomaticEnd(LoggerGR.COMMUNICATION);
 
     while (thieves.getSize() > 0) {
       final int thief = thieves.pop();
@@ -349,32 +351,42 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
         uncountedAsyncAt(
             place(thief),
             () -> {
-//              int newId = this.logger.startStoppingTime(Logger.STEALING);
-              this.consolePrinter
+              //                    int newId =
+              // globalRef.get().loggerGR.startStoppingTime(LoggerGR.STEALING);
+              globalRef
+                  .get()
+                  .consolePrinter
                   .println(here() + "(in reject1): trying to enter synchronized.");
-              synchronized (this.waiting) {
-                int newId = this.logger.startStoppingTime(Logger.COMMUNICATION);
-                this.consolePrinter
+              synchronized (globalRef.get().waiting) {
+                int newId = globalRef.get().loggerGR.startStoppingTime(LoggerGR.COMMUNICATION);
+                globalRef
+                    .get()
+                    .consolePrinter
                     .println(here() + "(in reject1): entered synchronized.");
-                this.waiting.set(false);
-                this.waiting.notifyAll();
-                this.logger.endStoppingTime(newId);
+                globalRef.get().waiting.set(false);
+                globalRef.get().waiting.notifyAll();
+                globalRef.get().loggerGR.endStoppingTime(newId);
               }
             });
       } else {
         uncountedAsyncAt(
             place(-thief - 1),
             () -> {
-//              int newId = this.logger.startStoppingTime(Logger.STEALING);
-              this.consolePrinter
+              //                    int newId =
+              // globalRef.get().loggerGR.startStoppingTime(LoggerGR.STEALING);
+              globalRef
+                  .get()
+                  .consolePrinter
                   .println(here() + "(in reject2): trying to enter synchronized.");
-              synchronized (this.waiting) {
-                int newId = this.logger.startStoppingTime(Logger.COMMUNICATION);
-                this.consolePrinter
+              synchronized (globalRef.get().waiting) {
+                int newId = globalRef.get().loggerGR.startStoppingTime(LoggerGR.COMMUNICATION);
+                globalRef
+                    .get()
+                    .consolePrinter
                     .println(here() + "(in reject2): entered synchronized.");
-                this.waiting.set(false);
-                this.waiting.notifyAll();
-                this.logger.endStoppingTime(newId);
+                globalRef.get().waiting.set(false);
+                globalRef.get().waiting.notifyAll();
+                globalRef.get().loggerGR.endStoppingTime(newId);
               }
             });
       }
@@ -383,32 +395,34 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
 
   /**
    * Send out steal requests. It does following things: (1) Probes w random victims and send out
-   * stealing requests by calling into {@link #request(int, boolean)} (2) If probing random victims
-   * fails, resort to lifeline buddies In both case, it sends out the request and wait on the
-   * thieves' response, which either comes from (i) {@link #reject()} method when victim has no
-   * workload to share or (ii) {@link #give(TaskBag)}
+   * stealing requests by calling into {@link #request(GlobalRef, int, boolean)} (2) If probing
+   * random victims fails, resort to lifeline buddies In both case, it sends out the request and
+   * wait on the thieves' response, which either comes from (i) {@link #reject(GlobalRef)} method
+   * when victim has no workload to share or (ii) {@link #give(GlobalRef, TaskBagGR)}
    *
+   * @param globalRef GlobalRef of FTWorker
    * @return !empty.get();
    */
-  public boolean steal() {
-    //        logger.startStoppingTimeWithAutomaticEnd(Logger.STEALING);
-    logger.startStoppingTimeWithAutomaticEnd(Logger.COMMUNICATION);
+  public boolean steal(GlobalRef<WorkerGR<Queue, T>> globalRef) {
+    //        loggerGR.startStoppingTimeWithAutomaticEnd(LoggerGR.STEALING);
+    loggerGR.startStoppingTimeWithAutomaticEnd(LoggerGR.COMMUNICATION);
     if (P == 1) {
       return false;
     }
     final int p = here().id;
     for (int i = 0; i < w && empty.get(); ++i) {
-      ++logger.stealsAttempted;
+      ++loggerGR.stealsAttempted;
       waiting.set(true);
-      logger.stopLive();
+      loggerGR.stopLive();
       int v = victims[random.nextInt(m)];
       try {
         uncountedAsyncAt(
             place(v),
             () -> {
-//              int newId = this.logger.startStoppingTime(Logger.DISTRIBUTING);
-              request(p, false);
-//              this.logger.endStoppingTime(newId);
+              //                int newId =
+              // globalRef.get().loggerGR.startStoppingTime(LoggerGR.DISTRIBUTING);
+              globalRef.get().request(globalRef, p, false);
+              //                globalRef.get().loggerGR.endStoppingTime(newId);
             });
       } catch (Throwable t) {
         System.out.println(here() + " steal NEW!!!: " + v);
@@ -418,7 +432,7 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
       consolePrinter.println(
           here() + "(in steal1): trying to enter synchronized, stole by " + v + ".");
       synchronized (waiting) {
-        this.logger.startStoppingTimeWithAutomaticEnd(Logger.WAITING);
+        this.loggerGR.startStoppingTimeWithAutomaticEnd(LoggerGR.WAITING);
         while (waiting.get()) {
           consolePrinter.println(here() + "(in steal1): entered synchronized.");
           try {
@@ -430,25 +444,26 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
         }
       }
       consolePrinter.println(here() + "(in steal1): exited synchronized.");
-      logger.startLive();
+      loggerGR.startLive();
     }
 
     for (int i = 0; (i < lifelines.length) && empty.get() && (0 <= lifelines[i]); ++i) {
       int lifeline = lifelines[i];
       if (!lifelinesActivated[lifeline]) {
-        ++logger.lifelineStealsAttempted;
+        ++loggerGR.lifelineStealsAttempted;
         lifelinesActivated[lifeline] = true;
         waiting.set(true);
         uncountedAsyncAt(
             place(lifeline),
             () -> {
-//              int newId = this.logger.startStoppingTime(Logger.STEALING);
-              request(p, true);
-//              this.logger.endStoppingTime(newId);
+              //                    int newId =
+              // globalRef.get().loggerGR.startStoppingTime(LoggerGR.STEALING);
+              globalRef.get().request(globalRef, p, true);
+              //                    globalRef.get().loggerGR.endStoppingTime(newId);
             });
         consolePrinter.println(here() + "(in steal2): trying to enter synchronized.");
         synchronized (waiting) {
-          this.logger.startStoppingTimeWithAutomaticEnd(Logger.WAITING);
+          this.loggerGR.startStoppingTimeWithAutomaticEnd(LoggerGR.WAITING);
           consolePrinter.println(here() + "(in steal2): entered synchronized.");
           while (waiting.get()) {
             try {
@@ -460,7 +475,7 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
           }
         }
         consolePrinter.println(here() + "(in steal2): exited synchronized.");
-        logger.startLive();
+        loggerGR.startLive();
       }
     }
     return !empty.get();
@@ -470,17 +485,18 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
    * Remote thief sending requests to local LJR. When empty or waiting for more work, reject
    * non-lifeline thief right away. Note, never reject lifeline thief.
    *
+   * @param globalRef PLH for Woker
    * @param thief place id of thief
    * @param lifeline if I am the lifeline buddy of the remote thief
    */
-  public void request(int thief, boolean lifeline) {
-    int newId = logger.startStoppingTime(Logger.COMMUNICATION);
+  public void request(GlobalRef<WorkerGR<Queue, T>> globalRef, int thief, boolean lifeline) {
+    int newId = loggerGR.startStoppingTime(LoggerGR.COMMUNICATION);
 
     try {
       if (lifeline) {
-        ++logger.lifelineStealsReceived;
+        ++loggerGR.lifelineStealsReceived;
       } else {
-        ++logger.stealsReceived;
+        ++loggerGR.stealsReceived;
       }
       if (empty.get() || waiting.get()) {
         if (lifeline) {
@@ -490,16 +506,21 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
         uncountedAsyncAt(
             place(thief),
             () -> {
-//              int newId = this.logger.startStoppingTime(Logger.STEALING);
-              this.consolePrinter
+              //                    int newId =
+              // globalRef.get().loggerGR.startStoppingTime(LoggerGR.STEALING);
+              globalRef
+                  .get()
+                  .consolePrinter
                   .println(here() + "(in request): trying to enter synchronized.");
-              synchronized (this.waiting) {
-                int thiefNewId = this.logger.startStoppingTime(Logger.COMMUNICATION);
-                this.consolePrinter
+              synchronized (globalRef.get().waiting) {
+                int thiefNewId = globalRef.get().loggerGR.startStoppingTime(LoggerGR.COMMUNICATION);
+                globalRef
+                    .get()
+                    .consolePrinter
                     .println(here() + "(in request): entered synchronized.");
-                this.waiting.set(false);
-                this.waiting.notifyAll();
-                this.logger.endStoppingTime(thiefNewId);
+                globalRef.get().waiting.set(false);
+                globalRef.get().waiting.notifyAll();
+                globalRef.get().loggerGR.endStoppingTime(thiefNewId);
               }
             });
       } else {
@@ -524,22 +545,23 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
     } catch (Throwable e) {
       error(e);
     }
-    this.logger.endStoppingTime(newId);
+    this.loggerGR.endStoppingTime(newId);
   }
 
   /**
-   * Merge current Worker'timestamps taskbag with incoming task bag.
+   * Merge current WorkerGR'timestamps taskbag with incoming task bag.
    *
    * @param loot task bag to merge
    * @param lifeline if it is from a lifeline buddy
    */
-  public void processLoot(TaskBag loot, boolean lifeline) {
+  public void processLoot(TaskBagGR loot, boolean lifeline) {
+
     if (lifeline) {
-      ++logger.lifelineStealsPerpetrated;
-      logger.lifelineNodesReceived += loot.size();
+      ++loggerGR.lifelineStealsPerpetrated;
+      loggerGR.lifelineNodesReceived += loot.size();
     } else {
-      ++logger.stealsPerpetrated;
-      logger.nodesReceived += loot.size();
+      ++loggerGR.stealsPerpetrated;
+      loggerGR.nodesReceived += loot.size();
     }
     queue.merge(loot);
     empty.set(false);
@@ -549,11 +571,13 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
    * Main process function of FTWorker. It does 4 things: (1) execute at most n tasks (2) respond to
    * stealing requests (3) when not worth sharing tasks, reject the stealing requests (4) when
    * running out of tasks, steal from others
+   *
+   * @param globalRef the GlobalRef of FTWorker
    */
-  public void processStack() {
+  public void processStack(GlobalRef<WorkerGR<Queue, T>> globalRef) {
     consolePrinter.println(here() + " starts in processStack");
-    logger.startStoppingTimeWithAutomaticEnd(Logger.COMPUTING);
-    //    logger.startStoppingTimeWithAutomaticEnd(Logger.PROCESSING);
+    loggerGR.startStoppingTimeWithAutomaticEnd(LoggerGR.COMPUTING);
+    //    loggerGR.startStoppingTimeWithAutomaticEnd(LoggerGR.PROCESSING);
     boolean cont;
     int size;
     consolePrinter.println(here() + " partial result1: " + queue.getResult().getResult()[0]);
@@ -561,23 +585,23 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
       boolean process = true;
       do {
         synchronized (waiting) {
-          logger.startStoppingTimeWithAutomaticEnd(Logger.PROCESSING);
+          loggerGR.startStoppingTimeWithAutomaticEnd(LoggerGR.PROCESSING);
           process = queue.process(n);
-          distribute();
+          distribute(globalRef);
         }
 
-        //        logger.startStoppingTimeWithAutomaticEnd(Logger.COMPUTING);
-        reject();
+        //        loggerGR.startStoppingTimeWithAutomaticEnd(LoggerGR.COMPUTING);
+        reject(globalRef);
       } while (process);
       empty.set(true);
-      reject();
+      reject(globalRef);
       consolePrinter.println(here() + "(in processStack): trying to enter synchronized.");
       consolePrinter.println(here() + " partial result2: " + queue.getResult().getResult()[0]);
       synchronized (waiting) {
         consolePrinter.println(here() + "(in processStack): entered synchronized.");
-        cont = steal() || 0 < queue.size();
-        logger.startStoppingTimeWithAutomaticEnd(Logger.COMPUTING);
-        //        logger.startStoppingTimeWithAutomaticEnd(Logger.PROCESSING);
+        cont = steal(globalRef) || 0 < queue.size();
+        loggerGR.startStoppingTimeWithAutomaticEnd(LoggerGR.COMPUTING);
+        //        loggerGR.startStoppingTimeWithAutomaticEnd(LoggerGR.PROCESSING);
         this.active.set(cont);
         size = this.queue.size();
       }
@@ -585,32 +609,33 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
     if (0 < size) {
       System.err.println(here() + "size is " + size + ", but should be 0!");
     }
-    reject();
-    logger.startStoppingTimeWithAutomaticEnd(Logger.IDLING);
-    reject();
-    logger.startStoppingTimeWithAutomaticEnd(Logger.IDLING);
+    reject(globalRef);
+    loggerGR.startStoppingTimeWithAutomaticEnd(LoggerGR.IDLING);
+    reject(globalRef);
+    loggerGR.startStoppingTimeWithAutomaticEnd(LoggerGR.IDLING);
   }
 
   /**
    * Entry point when workload is only known dynamically . The workflow is terminated when (1) No
    * one has work to do (2) Lifeline steals are responded
    *
-   * @param start init method used in {@link TaskQueue}, note the workload is not allocated, because
-   * the workload can only be self-generated.
+   * @param ref local handle for FTWorker
+   * @param start init method used in {@link TaskQueueGR}, note the workload is not allocated, because
+   *     the workload can only be self-generated.
    */
-  public void main(Runnable start) {
+  public void main(GlobalRef<WorkerGR<Queue, T>> ref, Runnable start) {
     consolePrinter.println(here() + " main1");
     finish(
         () -> {
           try {
             empty.set(false);
             active.set(true);
-            logger.startLive();
+            loggerGR.startLive();
             start.run();
-            processStack();
-            logger.endStoppingTimeWithAutomaticEnd();
-            logger.stopLive();
-            logger.nodesCount = queue.count();
+            processStack(ref);
+            loggerGR.endStoppingTimeWithAutomaticEnd();
+            loggerGR.stopLive();
+            loggerGR.nodesCount = queue.count();
           } catch (Throwable t) {
             error(t);
           }
@@ -620,17 +645,20 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
   /**
    * Entry point when workload can be known statically. The workflow is terminated when (1) No one
    * has work to do (2) Lifeline steals are responded
+   *
+   * @param ref handle for FTWorker. Note the workload is assumed to be allocated already in the
+   *     {@link TaskQueueGR} constructor.
    */
-  public void main() {
+  public void main(GlobalRef<WorkerGR<Queue, T>> ref) {
     consolePrinter.println(here() + " main2");
     try {
       empty.set(false);
       active.set(true);
-      logger.startLive();
-      processStack();
-      logger.endStoppingTimeWithAutomaticEnd();
-      logger.stopLive();
-      logger.nodesCount = queue.count();
+      loggerGR.startLive();
+      processStack(ref);
+      loggerGR.endStoppingTimeWithAutomaticEnd();
+      loggerGR.stopLive();
+      loggerGR.nodesCount = queue.count();
     } catch (Throwable t) {
       error(t);
     }
@@ -640,11 +668,12 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
    * Deal workload to the theif. If the thief is active already, simply merge the taskbag. If the
    * thief is inactive, the thief gets reactiveated again.
    *
+   * @param st: PLH for FTWorker
    * @param loot Task to share
    * @param source victim id
    */
-  private void deal(TaskBag loot, int source) {
-    this.logger.startStoppingTimeWithAutomaticEnd(Logger.COMMUNICATION);
+  private void deal(GlobalRef<WorkerGR<Queue, T>> st, TaskBagGR loot, int source) {
+    this.loggerGR.startStoppingTimeWithAutomaticEnd(LoggerGR.COMMUNICATION);
 
     try {
       boolean oldActive;
@@ -660,17 +689,17 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
         if (oldActive) {
           processLoot(loot, lifeline);
         } else {
-          logger.startLive();
+          loggerGR.startLive();
           processLoot(loot, lifeline);
         }
       }
 
       if (!oldActive) {
         consolePrinter.println(here() + "(in deal): restarted");
-        processStack();
-        logger.endStoppingTimeWithAutomaticEnd();
-        logger.stopLive();
-        logger.nodesCount = queue.count();
+        processStack(st);
+        loggerGR.endStoppingTimeWithAutomaticEnd();
+        loggerGR.stopLive();
+        loggerGR.nodesCount = queue.count();
       }
     } catch (Throwable t) {
       error(t);
