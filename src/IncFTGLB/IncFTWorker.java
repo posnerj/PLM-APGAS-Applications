@@ -12,6 +12,7 @@ import static apgas.Constructs.places;
 import static apgas.Constructs.prevPlace;
 import static apgas.Constructs.uncountedAsyncAt;
 
+import FTGLB.TaskBag;
 import apgas.DeadPlacesException;
 import apgas.GlobalRuntime;
 import apgas.Place;
@@ -22,6 +23,7 @@ import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.TransactionalMap;
 import com.hazelcast.map.EntryBackupProcessor;
@@ -41,6 +43,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import utils.ConsolePrinter;
 import utils.Pair;
+import utils.ReadOnlyEntryProcessor;
 
 /**
  * The local runner for the Cooperative.FTGLB framework. An instance of this class runs at each
@@ -612,9 +615,9 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
             if (isDead(thiefOfDeadPlace)) {
               this.consolePrinter.println("Thief " + thiefOfDeadPlace + " is dead!");
               if (this.iMapBackup
-                  .get(getBackupKey(thiefOfDeadPlaceID))
-                  .getReceivedLid(iteratorDeadPlaceID)
-                  >= deadLid
+                          .get(getBackupKey(thiefOfDeadPlaceID))
+                          .getReceivedLid(iteratorDeadPlaceID)
+                      >= deadLid
                   || this.iMapBackup.get(getBackupKey(iteratorDeadPlaceID)).getMyLid() < deadLid) {
                 this.consolePrinter.println("OpenLoot is already merged into backup!");
                 deadPlaceOpenLoot.put(thiefOfDeadPlaceID, null);
@@ -701,11 +704,11 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
                 crashPlace(7, 1, 0, thiefOfDeadPlace.id, deadLid);
 
                 if (this.iMapBackup
-                    .get(getBackupKey(thiefOfDeadPlaceID))
-                    .getReceivedLid(iteratorDeadPlaceID)
-                    >= deadLid
+                            .get(getBackupKey(thiefOfDeadPlaceID))
+                            .getReceivedLid(iteratorDeadPlaceID)
+                        >= deadLid
                     || this.iMapBackup.get(getBackupKey(iteratorDeadPlaceID)).getMyLid()
-                    < deadLid) {
+                        < deadLid) {
                   this.consolePrinter.println("OpenLoot is already merged into backup!");
                   deadPlaceOpenLoot.put(thiefOfDeadPlaceID, null);
                   this.iMapOpenLoot.set(getBackupKey(iteratorDeadPlaceID), deadPlaceOpenLoot);
@@ -1501,8 +1504,8 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
     this.consolePrinter.println("begin");
 
     if (((here().id == 0)
-        && (this.queue.count() == 1)
-        && (this.workingPlaces.get(here().id) == true))
+            && (this.queue.count() == 1)
+            && (this.workingPlaces.get(here().id) == true))
         == false) {
       this.putWorkingPlaces(here(), true);
     }
@@ -1698,6 +1701,8 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
     final int h = here().id;
     this.workingPlaces.put(h, true);
     final int startPlacesSize = places().size();
+    final ICompletableFuture futures[] = new ICompletableFuture[startPlacesSize];
+
 
     async(
         () -> {
@@ -1752,20 +1757,41 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
               continue;
             }
 
-            for (Map.Entry<Integer, HashMap<Integer, Pair<Long, IncTaskBag>>> iMapOpenLootEntry :
-                this.iMapOpenLoot.entrySet()) {
-              for (Map.Entry<Integer, Pair<Long, IncTaskBag>> pairEntry :
-                  iMapOpenLootEntry.getValue().entrySet()) {
-                if (pairEntry.getValue() != null) {
-                  countOpenLootLeft++;
-                  openHandlerLeft = true;
-                  cont = true;
-                  break;
+            long beforeLoop = System.nanoTime();
+            for (int i = 0; i < futures.length; ++i) {
+              futures[i] = this.iMapOpenLoot.submitToKey(getBackupKey(i), new ReadOnlyEntryProcessor
+                  () {
+                @Override
+                public Object process(Map.Entry entry) {
+                  final HashMap<Integer, Pair<Long, TaskBag>> map = (HashMap<Integer, Pair<Long, TaskBag>>) entry.getValue();
+                  for (Map.Entry<Integer, Pair<Long, TaskBag>> pairEntry : map.entrySet()) {
+                    if (pairEntry.getValue() != null) {
+                      return Boolean.TRUE;
+                    }
+                  }
+                  return Boolean.FALSE;
                 }
-              }
-              if (openHandlerLeft == true) {
+
+                @Override
+                public EntryBackupProcessor getBackupProcessor() {
+                  return null;
+                }
+              });
+            }
+            for (int i = 0; i < futures.length; ++i) {
+              if (futures[i].get().equals(Boolean.TRUE) == true) {
+                countOpenLootLeft++;
+                openHandlerLeft = true;
+                this.consolePrinter.println(here() + " restartDaemon:  Loot at key of place=" + i + " found");
+                cont = true;
                 break;
               }
+            }
+            long afterLoop = System.nanoTime();
+            this.consolePrinter.println(here() + " restartDaemon:  loop took " + ((afterLoop - beforeLoop) / 1E9) + " cec!");
+
+            if (cont == true || openHandlerLeft == true) {
+              continue;
             }
           }
           this.consolePrinter.println("restartDaemon end async");

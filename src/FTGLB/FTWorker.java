@@ -20,6 +20,7 @@ import apgas.util.PlaceLocalObject;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.TransactionalMap;
 import com.hazelcast.map.EntryBackupProcessor;
@@ -37,7 +38,9 @@ import java.util.Random;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import utils.ConsolePrinter;
 import utils.Pair;
+import utils.ReadOnlyEntryProcessor;
 
 /**
  * The local runner for the Cooperative.FTGLB framework. An instance of this class runs at each
@@ -534,9 +537,9 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
 
             if (isDead(thiefOfDeadPlace)) {
               if (this.iMapBackup
-                  .get(getBackupKey(thiefOfDeadPlaceID))
-                  .getReceivedLid(iteratorDeadPlaceID)
-                  >= deadLid
+                          .get(getBackupKey(thiefOfDeadPlaceID))
+                          .getReceivedLid(iteratorDeadPlaceID)
+                      >= deadLid
                   || this.iMapBackup.get(getBackupKey(iteratorDeadPlaceID)).getMyLid() < deadLid) {
                 deadPlaceOpenLoot.put(thiefOfDeadPlaceID, null);
                 this.iMapOpenLoot.set(getBackupKey(iteratorDeadPlaceID), deadPlaceOpenLoot);
@@ -599,11 +602,11 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
                 t.printStackTrace(System.out);
 
                 if (this.iMapBackup
-                    .get(getBackupKey(thiefOfDeadPlaceID))
-                    .getReceivedLid(iteratorDeadPlaceID)
-                    >= deadLid
+                            .get(getBackupKey(thiefOfDeadPlaceID))
+                            .getReceivedLid(iteratorDeadPlaceID)
+                        >= deadLid
                     || this.iMapBackup.get(getBackupKey(iteratorDeadPlaceID)).getMyLid()
-                    < deadLid) {
+                        < deadLid) {
                   deadPlaceOpenLoot.put(thiefOfDeadPlaceID, null);
                   this.iMapOpenLoot.set(getBackupKey(iteratorDeadPlaceID), deadPlaceOpenLoot);
                 } else {
@@ -1210,8 +1213,8 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
    */
   private void processStack() {
     if (((here().id == 0)
-        && (this.queue.count() == 1)
-        && (this.workingPlaces.get(here().id) == true))
+            && (this.queue.count() == 1)
+            && (this.workingPlaces.get(here().id) == true))
         == false) {
       this.putWorkingPlaces(here(), true);
     }
@@ -1344,6 +1347,7 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
     final int h = here().id;
     this.workingPlaces.put(h, true);
     final int startPlacesSize = places().size();
+    final ICompletableFuture futures[] = new ICompletableFuture[startPlacesSize];
 
     async(
         () -> {
@@ -1395,20 +1399,41 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
               continue;
             }
 
-            for (Map.Entry<Integer, HashMap<Integer, Pair<Long, TaskBag>>> iMapOpenLootEntry :
-                this.iMapOpenLoot.entrySet()) {
-              for (Map.Entry<Integer, Pair<Long, TaskBag>> pairEntry :
-                  iMapOpenLootEntry.getValue().entrySet()) {
-                if (pairEntry.getValue() != null) {
-                  countOpenLootLeft++;
-                  openHandlerLeft = true;
-                  cont = true;
-                  break;
+            long beforeLoop = System.nanoTime();
+            for (int i = 0; i < futures.length; ++i) {
+              futures[i] = this.iMapOpenLoot.submitToKey(getBackupKey(i), new ReadOnlyEntryProcessor
+                  () {
+                @Override
+                public Object process(Map.Entry entry) {
+                  final HashMap<Integer, Pair<Long, TaskBag>> map = (HashMap<Integer, Pair<Long, TaskBag>>) entry.getValue();
+                  for (Map.Entry<Integer, Pair<Long, TaskBag>> pairEntry : map.entrySet()) {
+                    if (pairEntry.getValue() != null) {
+                      return Boolean.TRUE;
+                    }
+                  }
+                  return Boolean.FALSE;
                 }
-              }
-              if (openHandlerLeft == true) {
+
+                @Override
+                public EntryBackupProcessor getBackupProcessor() {
+                  return null;
+                }
+              });
+            }
+            for (int i = 0; i < futures.length; ++i) {
+              if (futures[i].get().equals(Boolean.TRUE) == true) {
+                countOpenLootLeft++;
+                openHandlerLeft = true;
+                ConsolePrinter.getInstance().println(here() + " restartDaemon:  Loot at key of place=" + i + " found");
+                cont = true;
                 break;
               }
+            }
+            long afterLoop = System.nanoTime();
+            ConsolePrinter.getInstance().println(here() + " restartDaemon:  loop took " + ((afterLoop - beforeLoop) / 1E9) + " cec!");
+
+            if (cont == true || openHandlerLeft == true) {
+              continue;
             }
           }
         });
