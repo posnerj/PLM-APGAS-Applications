@@ -212,7 +212,7 @@ public class LoggerGR implements Serializable {
   //    }
 
   public synchronized void printStoppedTime() throws IOException {
-    if (stoppingResult == null) {
+    if (stoppingResult == null && here().id == 0) {
       System.out.println(
           "LoggerGR:printStoppedTime(): stoppingTime was not startet, wrong Constructor called?");
       return;

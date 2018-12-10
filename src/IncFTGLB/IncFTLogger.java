@@ -145,7 +145,7 @@ public class IncFTLogger implements Serializable {
   }
 
   public void printStoppedTime() throws IOException {
-    if (stoppingResult == null) {
+    if (stoppingResult == null && here().id == 0) {
       System.out.println(
           "Logger:printStoppedTime(): stoppingTime was not startet, wrong Constructor called?");
       return;
