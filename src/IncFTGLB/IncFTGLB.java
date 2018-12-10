@@ -4,6 +4,7 @@ import static apgas.Constructs.asyncAt;
 import static apgas.Constructs.at;
 import static apgas.Constructs.finish;
 import static apgas.Constructs.here;
+import static apgas.Constructs.place;
 import static apgas.Constructs.places;
 
 import apgas.GlobalRuntime;
@@ -198,7 +199,7 @@ public class IncFTGLB<Queue extends IncFTTaskQueue<Queue, T>, T extends Serializ
 
     // println log
     if (0 != (glbPara.v & IncFTGLBParameters.SHOW_TASKFRAME_LOG_FLAG)) {
-      printLog();
+//      printLog();
     }
 
     // collect glb statistics and println it out
@@ -331,9 +332,11 @@ public class IncFTGLB<Queue extends IncFTTaskQueue<Queue, T>, T extends Serializ
    */
   private void printLog() {
     int P = places().size();
-    for (int i = 0; i < P; ++i) {
-      at(places().get(i), () -> worker.queue.printLog());
-    }
+    finish(() -> {
+      for (int i = 0; i < P; ++i) {
+        asyncAt(place(i), () -> worker.queue.printLog());
+      }
+    });
   }
 
   private IncFTLogger[] fillLogger(IncFTLogger[] arr, Function<Integer, IncFTLogger> function) {

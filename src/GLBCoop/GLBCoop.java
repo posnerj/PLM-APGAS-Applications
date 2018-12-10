@@ -129,7 +129,7 @@ public class GLBCoop<Queue extends TaskQueue<Queue, T>, T extends Serializable>
 
     // println log
     if (0 != (glbPara.v & GLBParameters.SHOW_TASKFRAME_LOG_FLAG)) {
-      printLog();
+//      printLog();
     }
 
     // collect glb statistics and println it out
@@ -276,9 +276,11 @@ public class GLBCoop<Queue extends TaskQueue<Queue, T>, T extends Serializable>
    */
   private void printLog() {
     int P = places().size();
-    for (int i = 0; i < P; ++i) {
-      at(places().get(i), () -> worker.queue.printLog());
-    }
+    finish(() -> {
+      for (int i = 0; i < P; ++i) {
+        asyncAt(place(i), () -> worker.queue.printLog());
+      }
+    });
   }
 
   private Logger[] fillLogger(Logger[] arr, Function<Integer, Logger> function) {

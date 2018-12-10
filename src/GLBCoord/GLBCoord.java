@@ -1,15 +1,18 @@
 package GLBCoord;
 
 import static apgas.Constructs.async;
+import static apgas.Constructs.asyncAt;
 import static apgas.Constructs.at;
 import static apgas.Constructs.finish;
 import static apgas.Constructs.here;
+import static apgas.Constructs.place;
 import static apgas.Constructs.places;
 
 import GLBCoop.GLBParameters;
 import GLBCoop.GLBResult;
 import GLBCoop.Logger;
 import GLBCoop.TaskQueue;
+import GLBCoopGR.WorkerGR;
 import apgas.DeadPlaceException;
 import apgas.Place;
 import apgas.SerializableCallable;
@@ -132,7 +135,7 @@ public class GLBCoord<Queue extends TaskQueueCoord<Queue, T>, T extends Serializ
 
     // println log
     if (0 != (glbPara.v & GLBParameters.SHOW_TASKFRAME_LOG_FLAG)) {
-      printLog(globalRef);
+//      printLog(globalRef);
     }
 
     Logger l = null;
@@ -308,10 +311,13 @@ public class GLBCoord<Queue extends TaskQueueCoord<Queue, T>, T extends Serializ
    */
   private void printLog(GlobalRef<WorkerCoord<Queue, T>> globalRef) {
     int P = places().size();
-    for (int i = 0; i < P; ++i) {
-      at(places().get(i), () -> globalRef.get().queue.printLog());
-    }
+    finish(() -> {
+      for (int i = 0; i < P; ++i) {
+        asyncAt(place(i), () -> globalRef.get().queue.printLog());
+      }
+    });
   }
+
 
   private Logger[] fillLogger(Logger[] arr, Function<Integer, Logger> function) {
     long now = System.nanoTime();

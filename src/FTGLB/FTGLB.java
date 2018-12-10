@@ -4,6 +4,7 @@ import static apgas.Constructs.asyncAt;
 import static apgas.Constructs.at;
 import static apgas.Constructs.finish;
 import static apgas.Constructs.here;
+import static apgas.Constructs.place;
 import static apgas.Constructs.places;
 
 import apgas.GlobalRuntime;
@@ -186,7 +187,7 @@ public class FTGLB<Queue extends FTTaskQueue<Queue, T>, T extends Serializable>
 
     // println log
     if (0 != (glbPara.v & FTGLBParameters.SHOW_TASKFRAME_LOG_FLAG)) {
-      printLog();
+//      printLog();
     }
 
     // collect glb statistics and println it out
@@ -318,9 +319,11 @@ public class FTGLB<Queue extends FTTaskQueue<Queue, T>, T extends Serializable>
    */
   private void printLog() {
     int P = places().size();
-    for (int i = 0; i < P; ++i) {
-      at(places().get(i), () -> worker.queue.printLog());
-    }
+    finish(() -> {
+      for (int i = 0; i < P; ++i) {
+        asyncAt(place(i), () -> worker.queue.printLog());
+      }
+    });
   }
 
   private FTLogger[] fillLogger(FTLogger[] arr, Function<Integer, FTLogger> function) {
