@@ -6,6 +6,7 @@ import FTGLB.FTGLB;
 import FTGLB.FTGLBParameters;
 import apgas.Configuration;
 import apgas.SerializableCallable;
+import java.util.Calendar;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -124,8 +125,10 @@ public class PrimeG {
   }
 
   public static void main(String[] args) throws ParseException {
+    System.out.println("Start date: " + Calendar.getInstance().getTime());
     System.out.println(PrimeG.class.getName() + " starts");
     Integer[] result = compute(args);
     System.out.println("Result: " + result[0]);
+    System.out.println("End date: " + Calendar.getInstance().getTime());
   }
 }

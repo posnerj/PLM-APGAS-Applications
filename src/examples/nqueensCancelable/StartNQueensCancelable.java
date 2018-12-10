@@ -11,11 +11,13 @@ import apgas.Place;
 import apgas.impl.Config;
 import apgas.impl.GlobalRuntimeImpl;
 import examples.nqueens.NQueensResult;
+import java.util.Calendar;
 
 /** Created by jonas on 02.04.17. */
 public class StartNQueensCancelable {
 
   public static void main(String[] args) {
+    System.out.println("Start date: " + Calendar.getInstance().getTime());
 
     if (System.getProperty(Configuration.APGAS_PLACES) == null) {
       System.setProperty(Configuration.APGAS_PLACES, "2");
@@ -104,5 +106,6 @@ public class StartNQueensCancelable {
             System.out.println(GlobalRuntimeImpl.getRuntime().localCancelableTasks.entrySet());
           });
     }
+    System.out.println("End date: " + Calendar.getInstance().getTime());
   }
 }

@@ -7,11 +7,13 @@ import static apgas.Constructs.reduceAsyncAny;
 import static apgas.Constructs.staticInit;
 
 import apgas.Configuration;
+import java.util.Calendar;
 
 /** Created by jposner on 15.03.17. */
 public class StartUTS {
 
   public static void main(String[] args) {
+    System.out.println("Start date: " + Calendar.getInstance().getTime());
 
     if (System.getProperty(Configuration.APGAS_PLACES) == null) {
       System.setProperty(Configuration.APGAS_PLACES, "2");
@@ -62,5 +64,6 @@ public class StartUTS {
     reduceAsyncAny().display();
     end = System.nanoTime();
     System.out.println("Reduce time: " + ((end - start) / 1E9D));
+    System.out.println("End date: " + Calendar.getInstance().getTime());
   }
 }

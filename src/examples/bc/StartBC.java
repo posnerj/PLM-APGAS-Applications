@@ -13,6 +13,7 @@ import apgas.Place;
 import apgas.SerializableJob;
 import apgas.impl.Config;
 import java.util.ArrayList;
+import java.util.Calendar;
 import utils.Rmat;
 
 /**
@@ -21,6 +22,7 @@ import utils.Rmat;
 public class StartBC {
 
   public static void main(String[] args) {
+    System.out.println("Start date: " + Calendar.getInstance().getTime());
 
     if (System.getProperty(Configuration.APGAS_PLACES) == null) {
       System.setProperty(Configuration.APGAS_PLACES, "4");
@@ -131,5 +133,6 @@ public class StartBC {
     reduceAsyncAny().display();
     end = System.nanoTime();
     System.out.println("Reduce time: " + ((end - start) / 1E9D));
+    System.out.println("End date: " + Calendar.getInstance().getTime());
   }
 }

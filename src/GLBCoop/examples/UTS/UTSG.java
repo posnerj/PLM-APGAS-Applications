@@ -12,6 +12,8 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
+import java.util.Calendar;
+
 public class UTSG {
 
   static final int COUNT_PLACES = 4;
@@ -107,6 +109,7 @@ public class UTSG {
   }
 
   public static void main(String[] args) {
+    System.out.println("Start date: " + Calendar.getInstance().getTime());
     System.out.println(UTSG.class.getName() + " starts");
     Long[] result = new Long[0];
     try {
@@ -116,5 +119,6 @@ public class UTSG {
     }
 
     System.out.println("Result of run is: " + result[0]);
+    System.out.println("End date: " + Calendar.getInstance().getTime());
   }
 }

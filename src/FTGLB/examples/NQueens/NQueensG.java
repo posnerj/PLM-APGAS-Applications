@@ -6,6 +6,7 @@ import FTGLB.FTGLB;
 import FTGLB.FTGLBParameters;
 import apgas.Configuration;
 import apgas.SerializableCallable;
+import java.util.Calendar;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -134,6 +135,7 @@ public class NQueensG {
   }
 
   public static void main(String[] args) {
+    System.out.println("Start date: " + Calendar.getInstance().getTime());
     System.out.println(NQueensG.class.getName() + " starts");
     Long[] result = new Long[0];
     try {
@@ -143,5 +145,6 @@ public class NQueensG {
     }
 
     System.out.println("Result of run is: " + result[0]);
+    System.out.println("End date: " + Calendar.getInstance().getTime());
   }
 }

@@ -7,6 +7,7 @@ import IncFTGLB.IncFTGLBParameters;
 import apgas.Configuration;
 import apgas.SerializableCallable;
 import apgas.impl.Config;
+import java.util.Calendar;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -154,11 +155,13 @@ public class BCG {
   }
 
   public static void main(String[] args) {
+    System.out.println("Start date: " + Calendar.getInstance().getTime());
     System.out.println(BCG.class.getName() + " starts");
     try {
       compute(args);
     } catch (ParseException e) {
       e.printStackTrace();
     }
+    System.out.println("End date: " + Calendar.getInstance().getTime());
   }
 }

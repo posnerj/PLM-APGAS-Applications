@@ -18,6 +18,7 @@ import com.hazelcast.core.IMap;
 import com.hazelcast.map.EntryBackupProcessor;
 import com.hazelcast.map.EntryProcessor;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
@@ -69,6 +70,7 @@ public class StartTSP {
    *     (0/1) 5th argument: seed for creating TSP
    */
   public static void main(String args[]) {
+    System.out.println("Start date: " + Calendar.getInstance().getTime());
 
     if (args.length >= 1) {
       nCities = Integer.parseInt(args[0]);
@@ -183,6 +185,7 @@ public class StartTSP {
           }
         });
     System.out.println(logger);
+    System.out.println("End date: " + Calendar.getInstance().getTime());
   }
 
   /**

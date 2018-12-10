@@ -5,6 +5,7 @@ import static apgas.Constructs.*;
 import apgas.Configuration;
 import apgas.impl.Config;
 import apgas.impl.Worker;
+import java.util.Calendar;
 
 /** Created by jonas on 02.04.17. */
 public class StartPi {
@@ -12,6 +13,7 @@ public class StartPi {
   private static final boolean CANCEL = true;
 
   public static void main(String[] args) {
+    System.out.println("Start date: " + Calendar.getInstance().getTime());
 
     if (System.getProperty(Configuration.APGAS_PLACES) == null) {
       System.setProperty(Configuration.APGAS_PLACES, "2");
@@ -95,5 +97,7 @@ public class StartPi {
     System.out.println("Reduce time: " + ((end - start) / 1E9D));
     System.out.println("Pi result(reduceAsyncAny)=" + result.getResult());
     System.out.println("Pi result(reducePartialAsyncAny)=" + reduceAsyncAny().getResult());
+    System.out.println("End date: " + Calendar.getInstance().getTime());
+
   }
 }

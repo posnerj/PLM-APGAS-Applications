@@ -9,11 +9,13 @@ import static apgas.Constructs.reduceAsyncAny;
 import apgas.Configuration;
 import apgas.Place;
 import apgas.impl.Config;
+import java.util.Calendar;
 
 /** Created by jonas on 02.04.17. */
 public class StartNQueens {
 
   public static void main(String[] args) {
+    System.out.println("Start date: " + Calendar.getInstance().getTime());
 
     if (System.getProperty(Configuration.APGAS_PLACES) == null) {
       System.setProperty(Configuration.APGAS_PLACES, "2");
@@ -80,5 +82,6 @@ public class StartNQueens {
             + (NQueens.isSolutionCorrect(result.getResult())
                 ? "correct"
                 : " " + "wrong!!!!!!!!!!!!!"));
+    System.out.println("End date: " + Calendar.getInstance().getTime());
   }
 }
