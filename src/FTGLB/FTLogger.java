@@ -145,9 +145,11 @@ public class FTLogger implements Serializable {
   }
 
   public void printStoppedTime() throws IOException {
-    if (stoppingResult == null && here().id == 0) {
-      System.out.println(
-          "Logger:printStoppedTime(): stoppingTime was not startet, wrong Constructor called?");
+    if (stoppingResult == null) {
+      if (here().id == 0) {
+        System.out.println(
+            "FTLogger:printStoppedTime(): stoppingTime was not startet, wrong Constructor called?");
+      }
       return;
     }
 
@@ -371,8 +373,10 @@ public class FTLogger implements Serializable {
 
   private void stoppingTimeToResult() {
     if (stoppingTime == null) {
-      System.out.println(
-          "Logger:stoppingTimeToResult(): stoppingTime was not startet, wrong Constructor called?");
+      if (here().id == 0) {
+        System.out.println(
+            "FTLogger:stoppingTimeToResult(): stoppingTime was not startet, wrong Constructor called?");
+      }
       return;
     }
 

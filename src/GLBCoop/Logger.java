@@ -212,9 +212,11 @@ public class Logger implements Serializable {
   //    }
 
   public synchronized void printStoppedTime() throws IOException {
-    if (stoppingResult == null && here().id == 0) {
-      System.out.println(
-          "Logger:printStoppedTime(): stoppingTime was not startet, wrong Constructor called?");
+    if (stoppingResult == null) {
+      if (here().id == 0) {
+        System.out.println(
+            "Logger:printStoppedTime(): stoppingTime was not startet, wrong Constructor called?");
+      }
       return;
     }
 
@@ -431,8 +433,10 @@ public class Logger implements Serializable {
 
   public synchronized void stoppingTimeToResult() {
     if (stoppingTime == null) {
-      System.out.println(
-          "Logger:stoppingTimeToResult(): stoppingTime was not startet, wrong Constructor called?");
+      if (here().id == 0) {
+        System.out.println(
+            "Logger:stoppingTimeToResult(): stoppingTime was not startet, wrong Constructor called?");
+      }
       return;
     }
 
