@@ -388,7 +388,6 @@ public class FTLogger implements Serializable {
         + timeReference;
   }
 
-
   private class Time implements Serializable {
 
     private static final long serialVersionUID = 1L;

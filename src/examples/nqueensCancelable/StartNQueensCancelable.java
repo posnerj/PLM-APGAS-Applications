@@ -45,7 +45,7 @@ public class StartNQueensCancelable {
       }
     }
 
-    solutionLimit= 10;
+    solutionLimit = 10;
 
     final int _depth = depth;
     final int _threshold = threshold;
@@ -63,7 +63,9 @@ public class StartNQueensCancelable {
     }
 
     System.out.println(
-        "Running " + StartNQueensCancelable.class.getName() + " with "
+        "Running "
+            + StartNQueensCancelable.class.getName()
+            + " with "
             + places().size()
             + " places and "
             + numThreads

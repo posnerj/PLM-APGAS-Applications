@@ -48,7 +48,8 @@ public class ConsolePrinter implements Serializable {
   public synchronized void remotePrintln(int source, String output) {
     if (PRINT == true) {
       String callerName = Thread.currentThread().getStackTrace()[2].getMethodName();
-      System.out.println(place(source) + " (in " + callerName + " at " + here().id +"): " + output);
+      System.out.println(
+          place(source) + " (in " + callerName + " at " + here().id + "): " + output);
     }
   }
 

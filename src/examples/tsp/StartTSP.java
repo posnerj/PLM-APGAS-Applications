@@ -144,7 +144,9 @@ public class StartTSP {
         });
 
     System.out.println(
-        "Running " + StartTSP.class.getName() + " with "
+        "Running "
+            + StartTSP.class.getName()
+            + " with "
             + places().size()
             + " Places and "
             + numThreads

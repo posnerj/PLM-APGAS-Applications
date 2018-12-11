@@ -161,7 +161,9 @@ public class StartTSPCancelable {
         });
 
     System.out.println(
-        "Running " + StartTSPCancelable.class.getName() + " with "
+        "Running "
+            + StartTSPCancelable.class.getName()
+            + " with "
             + places().size()
             + " Places and "
             + numThreads

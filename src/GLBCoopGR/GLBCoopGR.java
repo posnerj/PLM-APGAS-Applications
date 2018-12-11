@@ -126,7 +126,7 @@ public class GLBCoopGR<Queue extends TaskQueueGR<Queue, T>, T extends Serializab
 
     // println log
     if (0 != (glbPara.v & GLBParametersGR.SHOW_TASKFRAME_LOG_FLAG)) {
-//      printLog();
+      //      printLog();
     }
 
     // collect glb statistics and println it out
@@ -143,18 +143,23 @@ public class GLBCoopGR<Queue extends TaskQueueGR<Queue, T>, T extends Serializab
   private void collectLifelineStatus(GlobalRef<WorkerGR<Queue, T>> globalRef) {
     final GlobalRef<LoggerGR[]> logs = new GlobalRef<>(new LoggerGR[p]);
 
-    finish(() -> {
-      for (Place p : places()) {
-        asyncAt(p, () -> {
-          globalRef.get().loggerGR.stoppingTimeToResult();
-          final LoggerGR logRemote = globalRef.get().loggerGR.get();
-          final int idRemote = here().id;
-          asyncAt(logs.home(), () -> {
-            logs.get()[idRemote] = logRemote;
-          });
+    finish(
+        () -> {
+          for (Place p : places()) {
+            asyncAt(
+                p,
+                () -> {
+                  globalRef.get().loggerGR.stoppingTimeToResult();
+                  final LoggerGR logRemote = globalRef.get().loggerGR.get();
+                  final int idRemote = here().id;
+                  asyncAt(
+                      logs.home(),
+                      () -> {
+                        logs.get()[idRemote] = logRemote;
+                      });
+                });
+          }
         });
-      }
-    });
 
     for (final LoggerGR l : logs.get()) {
       System.out.println(l);
@@ -175,17 +180,22 @@ public class GLBCoopGR<Queue extends TaskQueueGR<Queue, T>, T extends Serializab
     this.collectResultTime = System.nanoTime();
 
     GlobalRef<TaskQueueGR[]> globalResults = new GlobalRef<>(new TaskQueueGR[places().size()]);
-    finish(() -> {
-      for (final Place p : places()) {
-        asyncAt(p, () -> {
-          final Queue qRemote = this.globalRef.get().queue;
-          final int idRemote = here().id;
-          asyncAt(globalResults.home(), () -> {
-            globalResults.get()[idRemote] = qRemote;
-          });
+    finish(
+        () -> {
+          for (final Place p : places()) {
+            asyncAt(
+                p,
+                () -> {
+                  final Queue qRemote = this.globalRef.get().queue;
+                  final int idRemote = here().id;
+                  asyncAt(
+                      globalResults.home(),
+                      () -> {
+                        globalResults.get()[idRemote] = qRemote;
+                      });
+                });
+          }
         });
-      }
-    });
 
     TaskQueueGR result = null;
     for (final TaskQueueGR q : globalResults.get()) {
@@ -208,11 +218,11 @@ public class GLBCoopGR<Queue extends TaskQueueGR<Queue, T>, T extends Serializab
    */
   private void printLog(GlobalRef<WorkerGR<Queue, T>> globalRef) {
     int P = places().size();
-    finish(() -> {
-      for (int i = 0; i < P; ++i) {
-        asyncAt(place(i), () -> globalRef.get().queue.printLog());
-      }
-    });
+    finish(
+        () -> {
+          for (int i = 0; i < P; ++i) {
+            asyncAt(place(i), () -> globalRef.get().queue.printLog());
+          }
+        });
   }
-
 }

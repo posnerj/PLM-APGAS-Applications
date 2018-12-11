@@ -1703,7 +1703,6 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
     final int startPlacesSize = places().size();
     final ICompletableFuture futures[] = new ICompletableFuture[startPlacesSize];
 
-
     async(
         () -> {
           this.consolePrinter.println("restartDaemon begin async");
@@ -1759,36 +1758,44 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
 
             long beforeLoop = System.nanoTime();
             for (int i = 0; i < futures.length; ++i) {
-              futures[i] = this.iMapOpenLoot.submitToKey(getBackupKey(i), new ReadOnlyEntryProcessor
-                  () {
-                @Override
-                public Object process(Map.Entry entry) {
-                  final HashMap<Integer, Pair<Long, TaskBag>> map = (HashMap<Integer, Pair<Long, TaskBag>>) entry.getValue();
-                  for (Map.Entry<Integer, Pair<Long, TaskBag>> pairEntry : map.entrySet()) {
-                    if (pairEntry.getValue() != null) {
-                      return Boolean.TRUE;
-                    }
-                  }
-                  return Boolean.FALSE;
-                }
+              futures[i] =
+                  this.iMapOpenLoot.submitToKey(
+                      getBackupKey(i),
+                      new ReadOnlyEntryProcessor() {
+                        @Override
+                        public Object process(Map.Entry entry) {
+                          final HashMap<Integer, Pair<Long, TaskBag>> map =
+                              (HashMap<Integer, Pair<Long, TaskBag>>) entry.getValue();
+                          for (Map.Entry<Integer, Pair<Long, TaskBag>> pairEntry : map.entrySet()) {
+                            if (pairEntry.getValue() != null) {
+                              return Boolean.TRUE;
+                            }
+                          }
+                          return Boolean.FALSE;
+                        }
 
-                @Override
-                public EntryBackupProcessor getBackupProcessor() {
-                  return null;
-                }
-              });
+                        @Override
+                        public EntryBackupProcessor getBackupProcessor() {
+                          return null;
+                        }
+                      });
             }
             for (int i = 0; i < futures.length; ++i) {
               if (futures[i].get().equals(Boolean.TRUE) == true) {
                 countOpenLootLeft++;
                 openHandlerLeft = true;
-                this.consolePrinter.println(here() + " restartDaemon:  Loot at key of place=" + i + " found");
+                this.consolePrinter.println(
+                    here() + " restartDaemon:  Loot at key of place=" + i + " found");
                 cont = true;
                 break;
               }
             }
             long afterLoop = System.nanoTime();
-            this.consolePrinter.println(here() + " restartDaemon:  loop took " + ((afterLoop - beforeLoop) / 1E9) + " cec!");
+            this.consolePrinter.println(
+                here()
+                    + " restartDaemon:  loop took "
+                    + ((afterLoop - beforeLoop) / 1E9)
+                    + " cec!");
 
             if (cont == true || openHandlerLeft == true) {
               continue;

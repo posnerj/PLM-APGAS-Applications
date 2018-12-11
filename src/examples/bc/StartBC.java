@@ -16,9 +16,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import utils.Rmat;
 
-/**
- * Created by jposner on 15.03.17.
- */
+/** Created by jposner on 15.03.17. */
 public class StartBC {
 
   public static void main(String[] args) {
@@ -47,7 +45,9 @@ public class StartBC {
     }
 
     System.out.println(
-        "Running " + StartBC.class.getName() + " with "
+        "Running "
+            + StartBC.class.getName()
+            + " with "
             + places().size()
             + " places and "
             + numThreads

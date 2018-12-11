@@ -53,10 +53,12 @@ public class GLBCoop<Queue extends TaskQueue<Queue, T>, T extends Serializable>
     this.setupTime = l - this.setupTime;
 
     for (Place p : places()) {
-      at(p, () -> {
-        worker.logger.timeReference = l; //TODO hier oder ueber dem for?
-        worker.logger.startStoppingTimeWithAutomaticEnd(Logger.IDLING);
-      });
+      at(
+          p,
+          () -> {
+            worker.logger.timeReference = l; // TODO hier oder ueber dem for?
+            worker.logger.startStoppingTimeWithAutomaticEnd(Logger.IDLING);
+          });
     }
 
     consolePrinter.println("[Cooperative.GLBCoop " + here() + "]: leaving constructor.");
@@ -123,7 +125,7 @@ public class GLBCoop<Queue extends TaskQueue<Queue, T>, T extends Serializable>
     }
 
     if (0 != (glbPara.v & GLBParameters.SHOW_TASKFRAME_LOG_FLAG)) {
-//      printLog();
+      //      printLog();
     }
 
     if (0 != (glbPara.v & GLBParameters.SHOW_GLB_FLAG)) {
@@ -131,24 +133,27 @@ public class GLBCoop<Queue extends TaskQueue<Queue, T>, T extends Serializable>
     }
   }
 
-  /**
-   * Collect Cooperative.GLB statistics
-   */
+  /** Collect Cooperative.GLB statistics */
   private void collectLifelineStatus() {
     final GlobalRef<Logger[]> logs = new GlobalRef<>(new Logger[p]);
 
-    finish(() -> {
-      for (Place p : places()) {
-        asyncAt(p, () -> {
-          worker.logger.stoppingTimeToResult();
-          final Logger logRemote = worker.logger.get();
-          final int idRemote = here().id;
-          asyncAt(logs.home(), () -> {
-            logs.get()[idRemote] = logRemote;
-          });
+    finish(
+        () -> {
+          for (Place p : places()) {
+            asyncAt(
+                p,
+                () -> {
+                  worker.logger.stoppingTimeToResult();
+                  final Logger logRemote = worker.logger.get();
+                  final int idRemote = here().id;
+                  asyncAt(
+                      logs.home(),
+                      () -> {
+                        logs.get()[idRemote] = logRemote;
+                      });
+                });
+          }
         });
-      }
-    });
 
     for (final Logger l : logs.get()) {
       System.out.println(l);
@@ -169,17 +174,22 @@ public class GLBCoop<Queue extends TaskQueue<Queue, T>, T extends Serializable>
     this.collectResultTime = System.nanoTime();
 
     GlobalRef<TaskQueue[]> globalResults = new GlobalRef<>(new TaskQueue[places().size()]);
-    finish(() -> {
-      for (final Place p : places()) {
-        asyncAt(p, () -> {
-          final Queue qRemote = worker.queue;
-          final int idRemote = here().id;
-          asyncAt(globalResults.home(), () -> {
-            globalResults.get()[idRemote] = qRemote;
-          });
+    finish(
+        () -> {
+          for (final Place p : places()) {
+            asyncAt(
+                p,
+                () -> {
+                  final Queue qRemote = worker.queue;
+                  final int idRemote = here().id;
+                  asyncAt(
+                      globalResults.home(),
+                      () -> {
+                        globalResults.get()[idRemote] = qRemote;
+                      });
+                });
+          }
         });
-      }
-    });
 
     TaskQueue result = null;
     for (final TaskQueue q : globalResults.get()) {
@@ -197,14 +207,14 @@ public class GLBCoop<Queue extends TaskQueue<Queue, T>, T extends Serializable>
   /**
    * Print logging information on each place if user is interested in collecting per place
    * information, i.e., statistics instrumented.
-   *
    */
   private void printLog() {
     int P = places().size();
-    finish(() -> {
-      for (int i = 0; i < P; ++i) {
-        asyncAt(place(i), () -> worker.queue.printLog());
-      }
-    });
+    finish(
+        () -> {
+          for (int i = 0; i < P; ++i) {
+            asyncAt(place(i), () -> worker.queue.printLog());
+          }
+        });
   }
 }

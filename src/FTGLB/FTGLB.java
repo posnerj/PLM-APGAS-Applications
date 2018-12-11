@@ -140,7 +140,7 @@ public class FTGLB<Queue extends FTTaskQueue<Queue, T>, T extends Serializable>
    * Run method. This method is called when users does not know the workload upfront.
    *
    * @param start The method that (Root) initializes the workload that can start computation. Other
-   * places first get their workload by stealing.
+   *     places first get their workload by stealing.
    * @return {@link #collectResults()}
    */
   public T[] run(Runnable start) {
@@ -188,7 +188,7 @@ public class FTGLB<Queue extends FTTaskQueue<Queue, T>, T extends Serializable>
     }
 
     if (0 != (glbPara.v & FTGLBParameters.SHOW_TASKFRAME_LOG_FLAG)) {
-//      printLog();
+      //      printLog();
     }
 
     if (0 != (glbPara.v & FTGLBParameters.SHOW_GLB_FLAG)) {
@@ -196,24 +196,27 @@ public class FTGLB<Queue extends FTTaskQueue<Queue, T>, T extends Serializable>
     }
   }
 
-  /**
-   * Collect FTGLB statistics
-   */
+  /** Collect FTGLB statistics */
   private void collectLifelineStatus() {
     final GlobalRef<FTLogger[]> logs = new GlobalRef<>(new FTLogger[p]);
 
-    finish(() -> {
-      for (Place p : places()) {
-        asyncAt(p, () -> {
-          worker.logger.stoppingTimeToResult();
-          final FTLogger logRemote = worker.logger.get();
-          final int idRemote = here().id;
-          asyncAt(logs.home(), () -> {
-            logs.get()[idRemote] = logRemote;
-          });
+    finish(
+        () -> {
+          for (Place p : places()) {
+            asyncAt(
+                p,
+                () -> {
+                  worker.logger.stoppingTimeToResult();
+                  final FTLogger logRemote = worker.logger.get();
+                  final int idRemote = here().id;
+                  asyncAt(
+                      logs.home(),
+                      () -> {
+                        logs.get()[idRemote] = logRemote;
+                      });
+                });
+          }
         });
-      }
-    });
 
     for (final FTLogger l : logs.get()) {
       System.out.println(l);
@@ -238,18 +241,20 @@ public class FTGLB<Queue extends FTTaskQueue<Queue, T>, T extends Serializable>
     final ICompletableFuture futures[] = new ICompletableFuture[p];
 
     for (int i = 0; i < futures.length; ++i) {
-      futures[i] = this.iMap.submitToKey(getBackupKey(i), new ReadOnlyEntryProcessor
-          () {
-        @Override
-        public Object process(Map.Entry entry) {
-          return entry.getValue();
-        }
+      futures[i] =
+          this.iMap.submitToKey(
+              getBackupKey(i),
+              new ReadOnlyEntryProcessor() {
+                @Override
+                public Object process(Map.Entry entry) {
+                  return entry.getValue();
+                }
 
-        @Override
-        public EntryBackupProcessor getBackupProcessor() {
-          return null;
-        }
-      });
+                @Override
+                public EntryBackupProcessor getBackupProcessor() {
+                  return null;
+                }
+              });
     }
 
     for (final ICompletableFuture f : futures) {
@@ -298,11 +303,12 @@ public class FTGLB<Queue extends FTTaskQueue<Queue, T>, T extends Serializable>
    */
   private void printLog() {
     int P = places().size();
-    finish(() -> {
-      for (int i = 0; i < P; ++i) {
-        asyncAt(place(i), () -> worker.queue.printLog());
-      }
-    });
+    finish(
+        () -> {
+          for (int i = 0; i < P; ++i) {
+            asyncAt(place(i), () -> worker.queue.printLog());
+          }
+        });
   }
 
   private int getBackupKey(int placeID) {

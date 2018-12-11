@@ -201,7 +201,7 @@ public class IncFTGLB<Queue extends IncFTTaskQueue<Queue, T>, T extends Serializ
     }
 
     if (0 != (glbPara.v & IncFTGLBParameters.SHOW_TASKFRAME_LOG_FLAG)) {
-//      printLog();
+      //      printLog();
     }
 
     if (0 != (glbPara.v & IncFTGLBParameters.SHOW_GLB_FLAG)) {
@@ -213,18 +213,23 @@ public class IncFTGLB<Queue extends IncFTTaskQueue<Queue, T>, T extends Serializ
   private void collectLifelineStatus() {
     final GlobalRef<IncFTLogger[]> logs = new GlobalRef<>(new IncFTLogger[p]);
 
-    finish(() -> {
-      for (Place p : places()) {
-        asyncAt(p, () -> {
-          worker.logger.stoppingTimeToResult();
-          final IncFTLogger logRemote = worker.logger.get();
-          final int idRemote = here().id;
-          asyncAt(logs.home(), () -> {
-            logs.get()[idRemote] = logRemote;
-          });
+    finish(
+        () -> {
+          for (Place p : places()) {
+            asyncAt(
+                p,
+                () -> {
+                  worker.logger.stoppingTimeToResult();
+                  final IncFTLogger logRemote = worker.logger.get();
+                  final int idRemote = here().id;
+                  asyncAt(
+                      logs.home(),
+                      () -> {
+                        logs.get()[idRemote] = logRemote;
+                      });
+                });
+          }
         });
-      }
-    });
 
     for (final IncFTLogger l : logs.get()) {
       System.out.println(l);
@@ -249,24 +254,26 @@ public class IncFTGLB<Queue extends IncFTTaskQueue<Queue, T>, T extends Serializ
     final ICompletableFuture futures[] = new ICompletableFuture[p];
 
     for (int i = 0; i < futures.length; ++i) {
-      futures[i] = this.iMapBackup.submitToKey(getBackupKey(i), new ReadOnlyEntryProcessor
-          () {
-        @Override
-        public Object process(Map.Entry entry) {
-          return entry.getValue();
-        }
+      futures[i] =
+          this.iMapBackup.submitToKey(
+              getBackupKey(i),
+              new ReadOnlyEntryProcessor() {
+                @Override
+                public Object process(Map.Entry entry) {
+                  return entry.getValue();
+                }
 
-        @Override
-        public EntryBackupProcessor getBackupProcessor() {
-          return null;
-        }
-      });
+                @Override
+                public EntryBackupProcessor getBackupProcessor() {
+                  return null;
+                }
+              });
     }
 
     for (final ICompletableFuture f : futures) {
       if (null == result) {
         try {
-          result = ((IncQueueWrapper<Queue, T>)f.get()).queue;
+          result = ((IncQueueWrapper<Queue, T>) f.get()).queue;
         } catch (InterruptedException e) {
           e.printStackTrace();
         } catch (ExecutionException e) {
@@ -275,7 +282,7 @@ public class IncFTGLB<Queue extends IncFTTaskQueue<Queue, T>, T extends Serializ
         continue;
       } else {
         try {
-          result.mergeResult(((IncQueueWrapper<Queue, T>)f.get()).queue);
+          result.mergeResult(((IncQueueWrapper<Queue, T>) f.get()).queue);
         } catch (InterruptedException e) {
           e.printStackTrace();
         } catch (ExecutionException e) {
@@ -309,11 +316,12 @@ public class IncFTGLB<Queue extends IncFTTaskQueue<Queue, T>, T extends Serializ
    */
   private void printLog() {
     int P = places().size();
-    finish(() -> {
-      for (int i = 0; i < P; ++i) {
-        asyncAt(place(i), () -> worker.queue.printLog());
-      }
-    });
+    finish(
+        () -> {
+          for (int i = 0; i < P; ++i) {
+            asyncAt(place(i), () -> worker.queue.printLog());
+          }
+        });
   }
 
   private int getBackupKey(int placeID) {

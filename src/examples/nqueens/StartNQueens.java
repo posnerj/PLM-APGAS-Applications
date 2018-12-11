@@ -50,7 +50,9 @@ public class StartNQueens {
     }
 
     System.out.println(
-        "Running " + StartNQueens.class.getName() + " with "
+        "Running "
+            + StartNQueens.class.getName()
+            + " with "
             + places().size()
             + " places and "
             + numThreads

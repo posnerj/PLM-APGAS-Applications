@@ -24,8 +24,8 @@ import utils.ConsolePrinter;
  * @param <Queue> Concrete TaskQueue type
  * @param <T> Result type.
  */
-public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializable> extends
-    PlaceLocalObject implements Serializable {
+public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializable>
+    extends PlaceLocalObject implements Serializable {
 
   private static final long serialVersionUID = 1L;
 
@@ -33,30 +33,19 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
   final transient AtomicBoolean empty = new AtomicBoolean(true);
   final transient AtomicBoolean waiting = new AtomicBoolean(false);
 
-  /**
-   * Number of places.
-   */
+  /** Number of places. */
   final int P;
-  /**
-   * TaskQueue, responsible for crunching numbers
-   */
+  /** TaskQueue, responsible for crunching numbers */
   Queue queue;
-  /**
-   * Read as I am the "lifeline buddy" of my "lifelineThieves"
-   */
+  /** Read as I am the "lifeline buddy" of my "lifelineThieves" */
   ConcurrentLinkedQueue<Integer> lifelineThieves;
-  /**
-   * Thieves that send stealing requests
-   */
+  /** Thieves that send stealing requests */
   FixedSizeStack<Integer> thieves;
-  /**
-   * Lifeline buddies
-   */
+  /** Lifeline buddies */
   int[] lifelines;
   /**
    * The data structure to keep a key invariant: At any time, at most one message has been sent on
-   * an outgoing lifeline (and hence at most one message has been received on an incoming
-   * lifeline).
+   * an outgoing lifeline (and hence at most one message has been received on an incoming lifeline).
    */
   boolean[] lifelinesActivated;
   /**
@@ -65,13 +54,9 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
    * the other hand, less focused on computation
    */
   int n;
-  /**
-   * Number of random victims to probe before sending requests to lifeline buddy
-   */
+  /** Number of random victims to probe before sending requests to lifeline buddy */
   int w;
-  /**
-   * Maximum number of random victims
-   */
+  /** Maximum number of random victims */
   int m;
   /**
    * Random number, used when picking a non-lifeline victim/buddy. Important to seed with place id,
@@ -83,9 +68,7 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
    * responds it starts to probe its lifeline buddies
    */
   int[] victims;
-  /**
-   * Logger to record the work-stealing status
-   */
+  /** Logger to record the work-stealing status */
   Logger logger;
   /*
    * printing some helpful output for debugging, default is false
@@ -102,7 +85,7 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
    * @param l power of lifeline graph
    * @param z base of lifeline graph
    * @param tree true if the workload is dynamically generated, false if the workload can be
-   * statically generated
+   *     statically generated
    * @param s true if stopping Time in Logger, false if not
    */
   public Worker(
@@ -130,8 +113,7 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
     victims = new int[m];
     if (P > 1) {
       for (int i = 0; i < m; i++) {
-        while ((victims[i] = random.nextInt(P)) == h) {
-        }
+        while ((victims[i] = random.nextInt(P)) == h) {}
       }
     }
 
@@ -258,22 +240,20 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
         uncountedAsyncAt(
             place(thief),
             () -> {
-//              int newId = this.logger.startStoppingTime(Logger.STEALING);
+              //              int newId = this.logger.startStoppingTime(Logger.STEALING);
               synchronized (this.waiting) {
                 deal(loot, victim);
 
-                this.consolePrinter
-                    .println(
-                        here()
-                            + "(in give1): trying to enter synchronized. active = "
-                            + this.active.get()
-                            + "(should be true)");
+                this.consolePrinter.println(
+                    here()
+                        + "(in give1): trying to enter synchronized. active = "
+                        + this.active.get()
+                        + "(should be true)");
 
-                this.consolePrinter
-                    .println(here() + "(in give1): entered synchronized.");
+                this.consolePrinter.println(here() + "(in give1): entered synchronized.");
                 this.waiting.set(false);
                 this.waiting.notifyAll();
-//                this.logger.endStoppingTime(newId);
+                //                this.logger.endStoppingTime(newId);
               }
             });
       } else {
@@ -281,22 +261,20 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
         uncountedAsyncAt(
             place(-thief - 1),
             () -> {
-//              int newId = this.logger.startStoppingTime(Logger.STEALING);
+              //              int newId = this.logger.startStoppingTime(Logger.STEALING);
               synchronized (this.waiting) {
                 deal(loot, -1);
 
-                this.consolePrinter
-                    .println(
-                        here()
-                            + "(in give2): trying to enter synchronized. active = "
-                            + this.active.get()
-                            + "(should be true)");
+                this.consolePrinter.println(
+                    here()
+                        + "(in give2): trying to enter synchronized. active = "
+                        + this.active.get()
+                        + "(should be true)");
 
-                this.consolePrinter
-                    .println(here() + "(in give2): entered synchronized.");
+                this.consolePrinter.println(here() + "(in give2): entered synchronized.");
                 this.waiting.set(false);
                 this.waiting.notifyAll();
-//                this.logger.endStoppingTime(newId);
+                //                this.logger.endStoppingTime(newId);
               }
             });
       }
@@ -307,21 +285,15 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
       asyncAt(
           place(thief),
           () -> {
-//            this.logger.startStoppingTimeWithAutomaticEnd(Logger.STEALING);
-            this.consolePrinter
-                .println(
-                    here()
-                        + "(in give3): active = "
-                        + this.active.get()
-                        + "(can be both)");
+            //            this.logger.startStoppingTimeWithAutomaticEnd(Logger.STEALING);
+            this.consolePrinter.println(
+                here() + "(in give3): active = " + this.active.get() + "(can be both)");
             deal(loot, victim);
           });
     }
   }
 
-  /**
-   * Distribute works to (lifeline) thieves by calling the {@link #give(TaskBag)}
-   */
+  /** Distribute works to (lifeline) thieves by calling the {@link #give(TaskBag)} */
   public void distribute() {
     if (thieves.getSize() + lifelineThieves.size() > 0) {
       //            logger.startStoppingTimeWithAutomaticEnd(Logger.DISTRIBUTING);
@@ -349,13 +321,11 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
         uncountedAsyncAt(
             place(thief),
             () -> {
-//              int newId = this.logger.startStoppingTime(Logger.STEALING);
-              this.consolePrinter
-                  .println(here() + "(in reject1): trying to enter synchronized.");
+              //              int newId = this.logger.startStoppingTime(Logger.STEALING);
+              this.consolePrinter.println(here() + "(in reject1): trying to enter synchronized.");
               synchronized (this.waiting) {
                 int newId = this.logger.startStoppingTime(Logger.COMMUNICATION);
-                this.consolePrinter
-                    .println(here() + "(in reject1): entered synchronized.");
+                this.consolePrinter.println(here() + "(in reject1): entered synchronized.");
                 this.waiting.set(false);
                 this.waiting.notifyAll();
                 this.logger.endStoppingTime(newId);
@@ -365,13 +335,11 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
         uncountedAsyncAt(
             place(-thief - 1),
             () -> {
-//              int newId = this.logger.startStoppingTime(Logger.STEALING);
-              this.consolePrinter
-                  .println(here() + "(in reject2): trying to enter synchronized.");
+              //              int newId = this.logger.startStoppingTime(Logger.STEALING);
+              this.consolePrinter.println(here() + "(in reject2): trying to enter synchronized.");
               synchronized (this.waiting) {
                 int newId = this.logger.startStoppingTime(Logger.COMMUNICATION);
-                this.consolePrinter
-                    .println(here() + "(in reject2): entered synchronized.");
+                this.consolePrinter.println(here() + "(in reject2): entered synchronized.");
                 this.waiting.set(false);
                 this.waiting.notifyAll();
                 this.logger.endStoppingTime(newId);
@@ -406,9 +374,9 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
         uncountedAsyncAt(
             place(v),
             () -> {
-//              int newId = this.logger.startStoppingTime(Logger.DISTRIBUTING);
+              //              int newId = this.logger.startStoppingTime(Logger.DISTRIBUTING);
               request(p, false);
-//              this.logger.endStoppingTime(newId);
+              //              this.logger.endStoppingTime(newId);
             });
       } catch (Throwable t) {
         System.out.println(here() + " steal NEW!!!: " + v);
@@ -442,9 +410,9 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
         uncountedAsyncAt(
             place(lifeline),
             () -> {
-//              int newId = this.logger.startStoppingTime(Logger.STEALING);
+              //              int newId = this.logger.startStoppingTime(Logger.STEALING);
               request(p, true);
-//              this.logger.endStoppingTime(newId);
+              //              this.logger.endStoppingTime(newId);
             });
         consolePrinter.println(here() + "(in steal2): trying to enter synchronized.");
         synchronized (waiting) {
@@ -490,13 +458,11 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
         uncountedAsyncAt(
             place(thief),
             () -> {
-//              int newId = this.logger.startStoppingTime(Logger.STEALING);
-              this.consolePrinter
-                  .println(here() + "(in request): trying to enter synchronized.");
+              //              int newId = this.logger.startStoppingTime(Logger.STEALING);
+              this.consolePrinter.println(here() + "(in request): trying to enter synchronized.");
               synchronized (this.waiting) {
                 int thiefNewId = this.logger.startStoppingTime(Logger.COMMUNICATION);
-                this.consolePrinter
-                    .println(here() + "(in request): entered synchronized.");
+                this.consolePrinter.println(here() + "(in request): entered synchronized.");
                 this.waiting.set(false);
                 this.waiting.notifyAll();
                 this.logger.endStoppingTime(thiefNewId);
@@ -596,7 +562,7 @@ public final class Worker<Queue extends TaskQueue<Queue, T>, T extends Serializa
    * one has work to do (2) Lifeline steals are responded
    *
    * @param start init method used in {@link TaskQueue}, note the workload is not allocated, because
-   * the workload can only be self-generated.
+   *     the workload can only be self-generated.
    */
   public void main(Runnable start) {
     consolePrinter.println(here() + " main1");

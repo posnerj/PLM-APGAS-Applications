@@ -34,7 +34,9 @@ public class StartPi {
     }
 
     System.out.println(
-        "Running " + StartPi.class.getName() + " with "
+        "Running "
+            + StartPi.class.getName()
+            + " with "
             + places().size()
             + " places and "
             + numThreads
@@ -98,6 +100,5 @@ public class StartPi {
     System.out.println("Pi result(reduceAsyncAny)=" + result.getResult());
     System.out.println("Pi result(reducePartialAsyncAny)=" + reduceAsyncAny().getResult());
     System.out.println("End date: " + Calendar.getInstance().getTime());
-
   }
 }

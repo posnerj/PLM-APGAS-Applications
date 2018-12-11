@@ -6,13 +6,12 @@ import GLBCoop.GLBCoop;
 import GLBCoop.GLBParameters;
 import apgas.Configuration;
 import apgas.SerializableCallable;
+import java.util.Calendar;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-
-import java.util.Calendar;
 
 public class UTSG {
 

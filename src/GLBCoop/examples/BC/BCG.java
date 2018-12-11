@@ -99,7 +99,6 @@ public class BCG {
             + "   sysThreads = "
             + sysThreads);
 
-
     System.out.println("Running BC with the following parameters:");
     System.out.println(
         "seed = "

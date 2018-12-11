@@ -620,8 +620,8 @@ public final class WorkerGR<Queue extends TaskQueueGR<Queue, T>, T extends Seria
    * one has work to do (2) Lifeline steals are responded
    *
    * @param ref local handle for FTWorker
-   * @param start init method used in {@link TaskQueueGR}, note the workload is not allocated, because
-   *     the workload can only be self-generated.
+   * @param start init method used in {@link TaskQueueGR}, note the workload is not allocated,
+   *     because the workload can only be self-generated.
    */
   public void main(GlobalRef<WorkerGR<Queue, T>> ref, Runnable start) {
     consolePrinter.println(here() + " main1");

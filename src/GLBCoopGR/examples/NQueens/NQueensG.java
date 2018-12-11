@@ -93,7 +93,6 @@ public class NQueensG {
             + "   sysThreads = "
             + sysThreads);
 
-
     SerializableCallable<QueueGR> init = () -> new QueueGR(s, t);
 
     GLBParametersGR glbPara = new GLBParametersGR(n, w, l, z, m, verbose, timestamps, numPlaces);

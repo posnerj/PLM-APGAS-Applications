@@ -1,7 +1,6 @@
 package examples.utsThreeArrays;
 
 import static apgas.Constructs.asyncAny;
-import static apgas.Constructs.at;
 import static apgas.Constructs.finishAsyncAny;
 import static apgas.Constructs.reduceAsyncAny;
 import static apgas.Constructs.staticInit;
@@ -25,9 +24,10 @@ public class StartUTS {
     final int numPlaces = Integer.parseInt(System.getProperty(Configuration.APGAS_PLACES));
     final int numThreads = Integer.parseInt(System.getProperty(Configuration.APGAS_THREADS));
 
-    staticInit(() -> {
-      UTS.initMdList();
-    });
+    staticInit(
+        () -> {
+          UTS.initMdList();
+        });
 
     final UTS uts = new UTS(64);
 
@@ -38,7 +38,9 @@ public class StartUTS {
     final int _d = d;
 
     System.out.println(
-        "Running " + StartUTS.class.getName() + " with "
+        "Running "
+            + StartUTS.class.getName()
+            + " with "
             + numPlaces
             + " places and "
             + numThreads

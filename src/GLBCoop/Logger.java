@@ -55,7 +55,7 @@ public class Logger implements Serializable {
   public int id = 0;
 
   public int lastAutomaticEnd = 0;
-  final private int placeID;
+  private final int placeID;
 
   ConsolePrinter consolePrinter;
 

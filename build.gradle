@@ -1,9 +1,23 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+}
+
+// remove version in apgas:build.gradle
+plugins {
+    id "com.diffplug.gradle.spotless" version "3.10.0"
+}
+
+
+
 group 'PLM-APGAS-Examples'
 version '1.0-SNAPSHOT'
 
 apply plugin: 'java'
 apply plugin: 'idea'
 apply plugin: 'eclipse'
+
 
 sourceCompatibility = 11
 targetCompatibility = 11
@@ -16,11 +30,6 @@ subprojects {
     }
 }
 
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-}
 
 repositories {
     mavenCentral()
@@ -39,6 +48,7 @@ sourceSets {
     }
 }
 
+
 task copyToLib << {
     delete fileTree(dir: "lib")
     [ 'compile','runtime','testCompile' ].each { mode ->
@@ -55,6 +65,15 @@ task copyToBin(type: Copy) {
     into "bin"
 }
 
+spotless {
+    java {
+        googleJavaFormat("1.5")
+    }
+}
+
+afterEvaluate {
+    tasks.getByName('spotlessCheck').dependsOn(tasks.getByName('spotlessApply'))
+}
 
 build.finalizedBy(copyToLib)
 build.finalizedBy(copyToBin)
