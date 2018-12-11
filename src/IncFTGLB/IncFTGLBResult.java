@@ -22,6 +22,7 @@ public abstract class IncFTGLBResult<T extends Serializable> implements Serializ
   public abstract void display(T[] param);
 
   public T[] submitResult() {
+
     if (this.result == null) {
       this.result = getResult();
     }
