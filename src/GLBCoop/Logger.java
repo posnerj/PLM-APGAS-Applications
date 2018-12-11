@@ -29,11 +29,7 @@ public class Logger implements Serializable {
   public static final int IDLING = 4;
 
   private static final long serialVersionUID = 1L;
-  //    private final static String FILENAME = "gnuplot/dataCoop";
-  //    private final static String FILENAME = "/home/jp50zilu/workspace/gnuplot/dataCoop";
   private static final String FILENAME = "/home/users/0019/uk000618/workspace/gnuplot/dataCoop";
-
-  //        private final static String FILENAME = "/home/jposner/workspace/gnuplot/dataCoop";
 
   private static final String FILEEND = ".csv";
   public long nodesCount = 0;
@@ -56,27 +52,24 @@ public class Logger implements Serializable {
   public long timeDead = 0;
   public long startTime = 0;
   public long timeReference;
-  //    public AtomicInteger id = new AtomicInteger(0);
   public int id = 0;
 
   public int lastAutomaticEnd = 0;
+  final private int placeID;
 
   ConsolePrinter consolePrinter;
 
-  //    transient private ArrayList<Integer> timeTypes = new ArrayList<>(Arrays.asList(COMPUTING,
-  // STEALING, DISTRIBUTING, DEAD));
   private ArrayList<Integer> timeTypes =
       new ArrayList<>(Arrays.asList(PROCESSING, COMMUNICATION, WAITING, IDLING));
 
   private int timestamps = 0;
-  //    private ConcurrentLinkedDeque<Time> stoppingTime;
   private ArrayList<Time> stoppingTime;
   private Double[][] stoppingResult;
 
   public Logger(int timestamps) {
     this.timeReference = System.nanoTime();
+    this.placeID = here().id;
     if (timestamps > 0) {
-      //            this.stoppingTime = new ConcurrentLinkedDeque<>();
       this.stoppingTime = new ArrayList<>();
       this.stoppingResult = new Double[timestamps][timeTypes.size() + 1];
 
@@ -95,13 +88,6 @@ public class Logger implements Serializable {
     return str.substring(start, Math.min(end, str.length()));
   }
 
-  //    public void editLastTime(long now) {
-  //        if (stoppingTime == null) {
-  //            return;
-  //        }
-  //        stoppingTime.peekLast().endTime = now;
-  //    }
-
   public synchronized void startStoppingTimeWithAutomaticEnd(int newProcess) {
     if (stoppingTime == null) {
       return;
@@ -111,33 +97,11 @@ public class Logger implements Serializable {
       throw new IllegalArgumentException();
     }
 
-    //        stoppingTime.addLast(new Time(System.nanoTime(), newProcess, true));
-
     long now = System.nanoTime();
     Time time = new Time(now, newProcess, true);
     stoppingTime.add(time);
     stoppingTime.get(lastAutomaticEnd).endTime = now;
     lastAutomaticEnd = time.id;
-
-    //        if (stoppingTime.isEmpty()) {
-    ////            if (newProcess == Logger.DEAD) {
-    ////                stoppingTime.addLast(new Time(timeReference, newProcess, true));
-    ////            } else {
-    //                stoppingTime.addLast(new Time(System.nanoTime(), newProcess, true));
-    ////            }
-    //        } else {
-    //            Iterator<Time> timeIterator = stoppingTime.descendingIterator();
-    //            while (timeIterator.hasNext()) {
-    //                Time next = timeIterator.next();
-    //                if (next.automaticStop == true && next.process != newProcess && next.endTime
-    // == 0) {
-    //                    long now = System.nanoTime();
-    //                    next.endTime = now;
-    //                    stoppingTime.addLast(new Time(now, newProcess, true));
-    //                    return;
-    //                } //if newProcess == lastProcess we suppose that the method is called wrong
-    //            }
-    //        }
   }
 
   public synchronized void endStoppingTimeWithAutomaticEnd() {
@@ -145,19 +109,6 @@ public class Logger implements Serializable {
       return;
     }
     stoppingTime.get(lastAutomaticEnd).endTime = System.nanoTime();
-    //        Iterator<Time> timeIterator = stoppingTime.descendingIterator();
-    //        while (timeIterator.hasNext()) {
-    //            Time next = timeIterator.next();
-    ////            if (next.automaticStop == true && next.endTime == 0) {
-    //            if (next.automaticStop == true) {
-    //                if (next.endTime == 0) {
-    //                    next.endTime = System.nanoTime();
-    //                } else {
-    //                    return;
-    //                }
-    //                //ohne return = es werden alle noch offenen beendet!
-    //            }
-    //        }
   }
 
   public synchronized int startStoppingTime(int newProcess) {
@@ -169,13 +120,11 @@ public class Logger implements Serializable {
       throw new IllegalArgumentException();
     }
 
-    //        int myId = this.id.getAndIncrement();
     int myId = this.id;
     this.id++;
     if (myId == Integer.MAX_VALUE) {
       System.err.println("Logger:startStoppingTime: max value in id!!!!!");
     }
-    //        stoppingTime.addLast(new Time(System.nanoTime(), newProcess, false, myId));
     stoppingTime.add(new Time(System.nanoTime(), newProcess, false, myId));
     return myId;
   }
@@ -186,30 +135,7 @@ public class Logger implements Serializable {
     }
 
     stoppingTime.get(newId).endTime = System.nanoTime();
-    //
-    //        Iterator<Time> timeIterator = stoppingTime.descendingIterator();
-    //        while (timeIterator.hasNext()) {
-    //            Time next = timeIterator.next();
-    //            if (next.automaticStop == false && next.id == newId) {
-    //                next.endTime = System.nanoTime();
-    //                return;
-    //            }
-    //        }
-    //
-    //        assert (false) : "endStoppingTime was called wrong";
   }
-
-  //    public long getTotalStoppedTime() {
-  //        if (stoppingTime == null) {
-  //            return 0;
-  //        }
-  //
-  //        long result = 0;
-  //        for (Time t : stoppingTime) {
-  //            result += (t.endTime - t.startTime);
-  //        }
-  //        return result;
-  //    }
 
   public synchronized void printStoppedTime() throws IOException {
     if (stoppingResult == null) {
@@ -227,7 +153,6 @@ public class Logger implements Serializable {
 
     BufferedWriter br = new BufferedWriter(new FileWriter(fullFileName));
 
-    //        br.write("COMPUTING; STEALING; DISTRIBUTING; DEAD;");
     br.write("PROCESSING; COMMUNICATION; WAITING; IDLING;");
 
     br.newLine();
@@ -272,7 +197,6 @@ public class Logger implements Serializable {
     System.out.println("statistic is written to system");
   }
 
-  //    private double[][] generateStoppingResult(long fac) {
   private synchronized void generateStoppingResult(long fac) {
 
     Double[][] result = new Double[timestamps][timeTypes.size() + 1];
@@ -316,7 +240,6 @@ public class Logger implements Serializable {
         end = begin + (long) fac;
       }
     }
-    //        return result;
     this.stoppingResult = result;
   }
 
@@ -375,59 +298,7 @@ public class Logger implements Serializable {
     }
   }
 
-  public synchronized Logger get(boolean verbose) {
-    // because to much network traffic we send only a array size of timestamps
-    //        System.out.println(here() + " eins");
-    //        if (timestamps > 0) {
-    //            consolePrinter.println("Logger:get : " + here() + " " + stoppingTime.size());
-    //            stoppingTimeToResult();
-    //        }
-    //        System.out.println(here() + " last");
-
-    if (verbose) {
-      System.out.println(
-          ""
-              + here().id
-              + " -> "
-              + sub("" + (timeAlive / 1E9), 0, 6)
-              + " : "
-              + sub("" + (timeDead / 1E9), 0, 6)
-              + " : "
-              + sub("" + ((timeAlive + timeDead) / 1E9), 0, 6)
-              + " : "
-              + sub("" + (100.0 * timeAlive / (timeAlive + timeDead)), 0, 6)
-              + "%"
-              + " :: "
-              + sub("" + ((startTime - timeReference) / 1E9), 0, 6)
-              + " : "
-              + sub("" + ((lastStartStopLiveTimeStamp - timeReference) / 1E9), 0, 6)
-              + " :: "
-              + nodesCount
-              + " :: "
-              + nodesGiven
-              + " : "
-              + nodesReceived
-              + " : "
-              + lifelineNodesReceived
-              + " :: "
-              + stealsReceived
-              + " : "
-              + lifelineStealsReceived
-              + " :: "
-              + stealsSuffered
-              + " : "
-              + lifelineStealsSuffered
-              + " :: "
-              + stealsAttempted
-              + " : "
-              + (stealsAttempted - stealsPerpetrated)
-              + " :: "
-              + lifelineStealsAttempted
-              + " : "
-              + (lifelineStealsAttempted - lifelineStealsPerpetrated)
-              + " : "
-              + timeReference);
-    }
+  public synchronized Logger get() {
     return this;
   }
 
@@ -440,16 +311,6 @@ public class Logger implements Serializable {
       return;
     }
 
-    //        if (stoppingTime.peekLast() != null && stoppingTime.peekLast().endTime == 0) {
-    //            System.out.println("Logger:stoppingTimeToResult() was called wrong.");
-    //            return;
-    //        }
-
-    //        long firstTime = stoppingTime.peekFirst().startTime;
-    //        long fac = (stoppingTime.peekLast().endTime - firstTime) / timestamps;
-    //        this.stoppingResult = generateStoppingResult(fac);
-    //        this.stoppingTime = null;
-    //        long firstTime = stoppingTime.peekFirst().startTime;
     long firstTime = stoppingTime.get(0).startTime;
     long lastTime = 0;
     for (Time t : stoppingTime) {
@@ -458,10 +319,52 @@ public class Logger implements Serializable {
       }
     }
     long fac = (lastTime - firstTime) / timestamps;
-    //        long fac = (stoppingTime.peekLast().endTime - firstTime) / timestamps;
-    //        this.stoppingResult = generateStoppingResult(fac);
     this.generateStoppingResult(fac);
     this.stoppingTime = null;
+  }
+
+  @Override
+  public String toString() {
+    return this.placeID
+        + " -> "
+        + sub("" + (timeAlive / 1E9), 0, 6)
+        + " : "
+        + sub("" + (timeDead / 1E9), 0, 6)
+        + " : "
+        + sub("" + ((timeAlive + timeDead) / 1E9), 0, 6)
+        + " : "
+        + sub("" + (100.0 * timeAlive / (timeAlive + timeDead)), 0, 6)
+        + "%"
+        + " :: "
+        + sub("" + ((startTime - timeReference) / 1E9), 0, 6)
+        + " : "
+        + sub("" + ((lastStartStopLiveTimeStamp - timeReference) / 1E9), 0, 6)
+        + " :: "
+        + nodesCount
+        + " :: "
+        + nodesGiven
+        + " : "
+        + nodesReceived
+        + " : "
+        + lifelineNodesReceived
+        + " :: "
+        + stealsReceived
+        + " : "
+        + lifelineStealsReceived
+        + " :: "
+        + stealsSuffered
+        + " : "
+        + lifelineStealsSuffered
+        + " :: "
+        + stealsAttempted
+        + " : "
+        + (stealsAttempted - stealsPerpetrated)
+        + " :: "
+        + lifelineStealsAttempted
+        + " : "
+        + (lifelineStealsAttempted - lifelineStealsPerpetrated)
+        + " : "
+        + timeReference;
   }
 
   private class Time implements Serializable {
@@ -477,7 +380,6 @@ public class Logger implements Serializable {
     public int placeID;
 
     public Time(long now, int process, boolean automaticStop) {
-      //            this(now, process, automaticStop, Logger.this.id.getAndIncrement());
       this(now, process, automaticStop, Logger.this.id);
       Logger.this.id++;
     }

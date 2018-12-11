@@ -44,7 +44,7 @@ public class UTSG {
 
     int b = Integer.parseInt(cmd.getOptionValue("b", "4"));
     int r = Integer.parseInt(cmd.getOptionValue("r", "19"));
-    int d = Integer.parseInt(cmd.getOptionValue("d", "14"));
+    int d = Integer.parseInt(cmd.getOptionValue("d", "13"));
     int n = Integer.parseInt(cmd.getOptionValue("n", "511"));
     int l = Integer.parseInt(cmd.getOptionValue("l", "32"));
     int m = Integer.parseInt(cmd.getOptionValue("m", "1024"));

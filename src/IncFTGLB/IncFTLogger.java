@@ -313,65 +313,11 @@ public class IncFTLogger implements Serializable {
     }
   }
 
-  public IncFTLogger get(boolean verbose) {
-    if (timestamps > 0) {
-      stoppingTimeToResult();
-    }
-
-    if (verbose) {
-      System.out.println(
-          ""
-              + here().id
-              + " -> "
-              + sub("" + (timeAlive / 1E9), 0, 6)
-              + " : "
-              + sub("" + (timeDead / 1E9), 0, 6)
-              + " : "
-              + sub("" + ((timeAlive + timeDead) / 1E9), 0, 6)
-              + " : "
-              + sub("" + (100.0 * timeAlive / (timeAlive + timeDead)), 0, 6)
-              + "%"
-              + " :: "
-              + sub("" + ((startTime - timeReference) / 1E9), 0, 6)
-              + " : "
-              + sub("" + ((lastStartStopLiveTimeStamp - timeReference) / 1E9), 0, 6)
-              + " :: "
-              + nodesCount
-              + " :: "
-              + nodesGiven
-              + " : "
-              + nodesReceived
-              + " : "
-              + lifelineNodesReceived
-              + " :: "
-              + stealsReceived
-              + " : "
-              + lifelineStealsReceived
-              + " :: "
-              + stealsSuffered
-              + " : "
-              + lifelineStealsSuffered
-              + " :: "
-              + stealsAttempted
-              + " : "
-              + (stealsAttempted - stealsPerpetrated)
-              + " :: "
-              + lifelineStealsAttempted
-              + " : "
-              + (lifelineStealsAttempted - lifelineStealsPerpetrated)
-              + " :: "
-              + regularBackupsWritten
-              + " : "
-              + stealBackupsWritten
-              + " :: "
-              + sub("" + (timeWritingBackups / 1E9), 0, 6)
-              + " : "
-              + timeReference);
-    }
+  public IncFTLogger get() {
     return this;
   }
 
-  private void stoppingTimeToResult() {
+  public void stoppingTimeToResult() {
     if (stoppingTime == null) {
       if (here().id == 0) {
         System.out.println(
@@ -390,6 +336,56 @@ public class IncFTLogger implements Serializable {
     long fac = (lastTime - firstTime) / timestamps;
     this.generateStoppingResult(fac);
     this.stoppingTime = null;
+  }
+
+  @Override
+  public String toString() {
+    return this.placeID
+        + " -> "
+        + sub("" + (timeAlive / 1E9), 0, 6)
+        + " : "
+        + sub("" + (timeDead / 1E9), 0, 6)
+        + " : "
+        + sub("" + ((timeAlive + timeDead) / 1E9), 0, 6)
+        + " : "
+        + sub("" + (100.0 * timeAlive / (timeAlive + timeDead)), 0, 6)
+        + "%"
+        + " :: "
+        + sub("" + ((startTime - timeReference) / 1E9), 0, 6)
+        + " : "
+        + sub("" + ((lastStartStopLiveTimeStamp - timeReference) / 1E9), 0, 6)
+        + " :: "
+        + nodesCount
+        + " :: "
+        + nodesGiven
+        + " : "
+        + nodesReceived
+        + " : "
+        + lifelineNodesReceived
+        + " :: "
+        + stealsReceived
+        + " : "
+        + lifelineStealsReceived
+        + " :: "
+        + stealsSuffered
+        + " : "
+        + lifelineStealsSuffered
+        + " :: "
+        + stealsAttempted
+        + " : "
+        + (stealsAttempted - stealsPerpetrated)
+        + " :: "
+        + lifelineStealsAttempted
+        + " : "
+        + (lifelineStealsAttempted - lifelineStealsPerpetrated)
+        + " :: "
+        + regularBackupsWritten
+        + " : "
+        + stealBackupsWritten
+        + " :: "
+        + sub("" + (timeWritingBackups / 1E9), 0, 6)
+        + " : "
+        + timeReference;
   }
 
   private class Time implements Serializable {

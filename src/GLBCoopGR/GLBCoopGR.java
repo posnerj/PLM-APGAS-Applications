@@ -1,6 +1,5 @@
 package GLBCoopGR;
 
-import static apgas.Constructs.async;
 import static apgas.Constructs.asyncAt;
 import static apgas.Constructs.at;
 import static apgas.Constructs.finish;
@@ -8,13 +7,11 @@ import static apgas.Constructs.here;
 import static apgas.Constructs.place;
 import static apgas.Constructs.places;
 
-import apgas.DeadPlaceException;
 import apgas.Place;
 import apgas.SerializableCallable;
 import apgas.util.GlobalRef;
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.function.Function;
 import utils.ConsolePrinter;
 
 public class GLBCoopGR<Queue extends TaskQueueGR<Queue, T>, T extends Serializable>
@@ -75,7 +72,7 @@ public class GLBCoopGR<Queue extends TaskQueueGR<Queue, T>, T extends Serializab
    *
    * @param start The method that (Root) initializes the workload that can start computation. Other
    *     places first get their workload by stealing.
-   * @return {@link #collectResults(long)}
+   * @return {@link #collectResults()}
    */
   public T[] run(Runnable start) {
     consolePrinter.println("[Cooperative.GLBCoopGR " + here() + "]: starting with run().");
@@ -84,7 +81,7 @@ public class GLBCoopGR<Queue extends TaskQueueGR<Queue, T>, T extends Serializab
     long now = System.nanoTime();
     crunchNumberTime = now - crunchNumberTime;
     consolePrinter.println("[Cooperative.GLBCoopGR " + here() + "]: reducing result.");
-    T[] r = collectResults(now);
+    T[] r = collectResults();
     end(r);
     return r;
   }
@@ -93,7 +90,7 @@ public class GLBCoopGR<Queue extends TaskQueueGR<Queue, T>, T extends Serializab
    * Run method. This method is called when users can know the workload upfront and initialize the
    * workload in {@link TaskQueueGR}
    *
-   * @return {@link #collectResults(long)}
+   * @return {@link #collectResults()}
    */
   public T[] runParallel() {
     consolePrinter.println("[Cooperative.GLBCoopGR " + here() + "]: starting with runParallel().");
@@ -102,16 +99,16 @@ public class GLBCoopGR<Queue extends TaskQueueGR<Queue, T>, T extends Serializab
     long now = System.nanoTime();
     crunchNumberTime = now - crunchNumberTime;
     consolePrinter.println("[Cooperative.GLBCoopGR " + here() + "]: reducing result.");
-    T[] r = collectResults(now);
+    T[] r = collectResults();
     //        T[] r = this.globalRef.get().queue.getResult().getResult();
     end(r);
     return r;
   }
 
   /**
-   * Print various Cooperative.FTGLB-related information, including result; time spent in
+   * Print various Cooperative.GLB-related information, including result; time spent in
    * initialization, computation and result collection; any user specified log information (per
-   * place); and Cooperative.FTGLB statistics.
+   * place); and Cooperative.GLB statistics.
    *
    * @param r result to println
    */
@@ -129,7 +126,7 @@ public class GLBCoopGR<Queue extends TaskQueueGR<Queue, T>, T extends Serializab
 
     // println log
     if (0 != (glbPara.v & GLBParametersGR.SHOW_TASKFRAME_LOG_FLAG)) {
-//      printLog(globalRef);
+//      printLog();
     }
 
     // collect glb statistics and println it out
@@ -139,74 +136,32 @@ public class GLBCoopGR<Queue extends TaskQueueGR<Queue, T>, T extends Serializab
   }
 
   /**
-   * Collect Cooperative.FTGLB statistics
+   * Collect Cooperative.GLB statistics
    *
    * @param globalRef PlaceLocalHandle for {@link WorkerGR}
    */
   private void collectLifelineStatus(GlobalRef<WorkerGR<Queue, T>> globalRef) {
-    LoggerGR[] logs;
-    // val groupSize:Long = 128;
-    //        boolean params = (0 != (this.glbPara.v & GLBParametersGR.SHOW_GLB_FLAG));
-    final int V = this.glbPara.v;
-    final int P = p;
-    final int S = this.glbPara.timestamps;
+    final GlobalRef<LoggerGR[]> logs = new GlobalRef<>(new LoggerGR[p]);
 
-    if (1024 < p) {
-      Function<Integer, LoggerGR> filling =
-          (Function<Integer, LoggerGR> & Serializable)
-              (Integer i) ->
-                  at(
-                      places().get(i * 32),
-                      () -> {
-                        final int h = here().id;
-                        final int n = Math.min(32, P - h);
-
-                        Function<Integer, LoggerGR> newFilling =
-                            (Function<Integer, LoggerGR> & Serializable)
-                                (j ->
-                                    at(
-                                        places().get(h + j),
-                                        () ->
-                                            globalRef
-                                                .get()
-                                                .loggerGR
-                                                .get((V & GLBParametersGR.SHOW_GLB_FLAG) != 0)));
-
-                        LoggerGR[] newLogs = fillLogger(new LoggerGR[n], newFilling);
-                        LoggerGR newLog = new LoggerGR(S);
-                        newLog.collect(newLogs);
-                        return newLog;
-                      });
-      logs = fillLogger(new LoggerGR[p / 32], filling);
-    } else {
-      //            Function<Integer, LoggerGR> newFilling = (Function<Integer, LoggerGR> &
-      // Serializable) i -> at(place(i),
-      //                    () -> {
-      //                        return worker.loggerGR.get((V & FTGLBParameters.SHOW_GLB_FLAG) != 0);
-      //                    });
-
-      logs = new LoggerGR[p];
-      finish(
-          () -> {
-            for (Place p : places()) {
-              asyncAt(
-                  p,
-                  () -> {
-                    globalRef.get().loggerGR.stoppingTimeToResult();
-                  });
-            }
+    finish(() -> {
+      for (Place p : places()) {
+        asyncAt(p, () -> {
+          globalRef.get().loggerGR.stoppingTimeToResult();
+          final LoggerGR logRemote = globalRef.get().loggerGR.get();
+          final int idRemote = here().id;
+          asyncAt(logs.home(), () -> {
+            logs.get()[idRemote] = logRemote;
           });
-
-      for (int i = 0; i < p; i++) {
-        logs[i] = at(place(i), () -> globalRef.get().loggerGR.get(true));
-        //                System.out.println("FTGLB, logs[" + i + "].stoppingResult.length = " +
-        // logs[i].stoppingResult.length);
+        });
       }
-      //            logs = fillLogger(new FTLogger[p], newFilling);
+    });
+
+    for (final LoggerGR l : logs.get()) {
+      System.out.println(l);
     }
 
     LoggerGR log = new LoggerGR(glbPara.timestamps);
-    log.collect(logs);
+    log.collect(logs.get());
     log.stats();
 
     try {
@@ -216,55 +171,33 @@ public class GLBCoopGR<Queue extends TaskQueueGR<Queue, T>, T extends Serializab
     }
   }
 
-  protected T[] collectResults(long now) {
-    final GlobalRef<WorkerGR<Queue, T>> globalRef = this.globalRef;
+  protected T[] collectResults() {
     this.collectResultTime = System.nanoTime();
-    this.rootGlbR = this.globalRef.get().queue.getResult();
 
-    finish(
-        () -> {
-          for (final Place p : places()) {
-
-            if (here().id == p.id) {
-              consolePrinter.println(
-                  here() + "(in collectResults): count_1 = " + +globalRef.get().queue.count());
-              consolePrinter.println(
-                  here() + "(in collectResults): size_1 = " + globalRef.get().queue.size());
-              continue;
-            }
-            try {
-              TaskQueueGR<Queue, T> q =
-                  at(
-                      p,
-                      () -> {
-                        return globalRef.get().queue;
-                      });
-
-              consolePrinter.println(
-                  at(
-                      p,
-                      () ->
-                          here()
-                              + "(in collectResults): count_2 = "
-                              + globalRef.get().queue.count()));
-              consolePrinter.println(
-                  at(
-                      p,
-                      () ->
-                          here()
-                              + "(in collectResults): size_2 = "
-                              + globalRef.get().queue.size()));
-              globalRef.get().queue.mergeResult(q);
-            } catch (final DeadPlaceException e) {
-              async(
-                  () -> {
-                    throw e;
-                  });
-            }
-          }
+    GlobalRef<TaskQueueGR[]> globalResults = new GlobalRef<>(new TaskQueueGR[places().size()]);
+    finish(() -> {
+      for (final Place p : places()) {
+        asyncAt(p, () -> {
+          final Queue qRemote = this.globalRef.get().queue;
+          final int idRemote = here().id;
+          asyncAt(globalResults.home(), () -> {
+            globalResults.get()[idRemote] = qRemote;
+          });
         });
+      }
+    });
+
+    TaskQueueGR result = null;
+    for (final TaskQueueGR q : globalResults.get()) {
+      if (null == result) {
+        result = q;
+        continue;
+      }
+      result.mergeResult(q);
+    }
+    this.rootGlbR = result.getResult();
     collectResultTime = System.nanoTime() - collectResultTime;
-    return globalRef.get().queue.getResult().getResult();
+    return this.rootGlbR.getResult();
   }
 
   /**
@@ -282,14 +215,4 @@ public class GLBCoopGR<Queue extends TaskQueueGR<Queue, T>, T extends Serializab
     });
   }
 
-  private LoggerGR[] fillLogger(LoggerGR[] arr, Function<Integer, LoggerGR> function) {
-    long now = System.nanoTime();
-    for (int i = 0; i < arr.length; i++) {
-      arr[i] = function.apply(i);
-      final long l = System.nanoTime();
-      consolePrinter.println("" + (l - now) / 1E9);
-      now = l;
-    }
-    return arr;
-  }
 }

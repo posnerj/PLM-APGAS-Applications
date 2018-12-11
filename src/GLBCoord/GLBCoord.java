@@ -1,6 +1,5 @@
 package GLBCoord;
 
-import static apgas.Constructs.async;
 import static apgas.Constructs.asyncAt;
 import static apgas.Constructs.at;
 import static apgas.Constructs.finish;
@@ -11,18 +10,11 @@ import static apgas.Constructs.places;
 import GLBCoop.GLBParameters;
 import GLBCoop.GLBResult;
 import GLBCoop.Logger;
-import GLBCoop.TaskQueue;
-import GLBCoopGR.WorkerGR;
-import apgas.DeadPlaceException;
 import apgas.Place;
 import apgas.SerializableCallable;
 import apgas.util.GlobalRef;
 import java.io.IOException;
 import java.io.Serializable;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
-import java.util.Locale;
-import java.util.function.Function;
 import utils.ConsolePrinter;
 
 public class GLBCoord<Queue extends TaskQueueCoord<Queue, T>, T extends Serializable>
@@ -82,7 +74,7 @@ public class GLBCoord<Queue extends TaskQueueCoord<Queue, T>, T extends Serializ
    *
    * @param start The method that (Root) initializes the workload that can start computation. Other
    *     places first get their workload by stealing.
-   * @return {@link #collectResults(long)}
+   * @return {@link #collectResults()}
    */
   public T[] run(Runnable start) {
     consolePrinter.println("[GLBCoord.SplitGLB " + here() + "]: starting with run().");
@@ -91,16 +83,16 @@ public class GLBCoord<Queue extends TaskQueueCoord<Queue, T>, T extends Serializ
     long now = System.nanoTime();
     crunchNumberTime = now - crunchNumberTime;
     consolePrinter.println("[GLBCoord.SplitGLB " + here() + "]: reducing result.");
-    T[] r = collectResults(now);
+    T[] r = collectResults();
     end(r);
     return r;
   }
 
   /**
    * Run method. This method is called when users can know the workload upfront and initialize the
-   * workload in {@link TaskQueue}
+   * workload in {@link TaskQueueCoord}
    *
-   * @return {@link #collectResults(long)}
+   * @return {@link #collectResults()}
    */
   public T[] runParallel() {
     consolePrinter.println("[GLBCoord.SplitGLB " + here() + "]: starting with runParallel().");
@@ -109,7 +101,7 @@ public class GLBCoord<Queue extends TaskQueueCoord<Queue, T>, T extends Serializ
     long now = System.nanoTime();
     crunchNumberTime = now - crunchNumberTime;
     consolePrinter.println("[GLBCoord.SplitGLB " + here() + "]: reducing result.");
-    T[] r = collectResults(now);
+    T[] r = collectResults();
     end(r);
     return r;
   }
@@ -126,130 +118,50 @@ public class GLBCoord<Queue extends TaskQueueCoord<Queue, T>, T extends Serializ
     if (0 != (glbPara.v & GLBParameters.SHOW_RESULT_FLAG)) {
       rootGlbR.display(r);
     }
-    // println overall timing information
+
     if (0 != (glbPara.v & GLBParameters.SHOW_TIMING_FLAG)) {
-      System.out.println("Setup time(timestamps):" + ((setupTime) / 1E9));
-      System.out.println("Process time(timestamps):" + ((crunchNumberTime) / 1E9));
-      System.out.println("Result reduce time(timestamps):" + (collectResultTime / 1E9));
+      System.out.println("Setup time:" + ((setupTime) / 1E9));
+      System.out.println("Process time:" + ((crunchNumberTime) / 1E9));
+      System.out.println("Result reduce time:" + (collectResultTime / 1E9));
     }
 
-    // println log
     if (0 != (glbPara.v & GLBParameters.SHOW_TASKFRAME_LOG_FLAG)) {
-//      printLog(globalRef);
+//      printLog();
     }
 
-    Logger l = null;
-    // collect glb statistics and println it out
     if (0 != (glbPara.v & GLBParameters.SHOW_GLB_FLAG)) {
-      l = collectLifelineStatus(globalRef);
-    }
-
-    long totalCountRelease = 0;
-    long totalCountReacquire = 0;
-
-    for (Place p : places()) {
-      totalCountReacquire +=
-          at(
-              p,
-              () -> {
-                return globalRef.get().queue.getCountRequire();
-              });
-      totalCountRelease +=
-          at(
-              p,
-              () -> {
-                return globalRef.get().queue.getCountRelease();
-              });
-    }
-
-    if (l != null) {
-      double stealRatio =
-          (double) l.nodesGiven / (double) l.stealsPerpetrated
-              + (double) l.lifelineStealsPerpetrated;
-      double accRatio = (double) totalCountReacquire / stealRatio;
-
-      DecimalFormatSymbols otherSymbols = new DecimalFormatSymbols(Locale.GERMAN);
-      otherSymbols.setDecimalSeparator('.');
-      otherSymbols.setGroupingSeparator('.');
-      DecimalFormat df = new DecimalFormat("#.##", otherSymbols);
-
-      System.out.println(
-          "countRelease:"
-              + totalCountRelease
-              + ", countReacquire:"
-              + totalCountReacquire
-              + ", Task items stolen:"
-              + l.nodesGiven
-              + ", (direct):"
-              + l.nodesReceived
-              + ", (lifeline):"
-              + l.lifelineNodesReceived
-              + ", successful direct steals:"
-              + l.stealsPerpetrated
-              + ", successful lifeline steals:"
-              + l.lifelineStealsPerpetrated
-              + ", Process time:"
-              + ((crunchNumberTime) / 1E9)
-              + ", Tasks per Steal:"
-              + df.format(stealRatio)
-              + ", accRatio: "
-              + df.format(accRatio));
+      collectLifelineStatus(globalRef);
     }
   }
+
 
   /**
    * Collect Cooperative.FTGLB statistics
    *
    * @param globalRef PlaceLocalHandle for {@link WorkerCoord}
    */
-  private Logger collectLifelineStatus(GlobalRef<WorkerCoord<Queue, T>> globalRef) {
-    Logger[] logs;
-    // val groupSize:Long = 128;
-    //        boolean params = (0 != (this.glbPara.v & GLBParameters.SHOW_GLB_FLAG));
-    final int V = this.glbPara.v;
-    final int P = p;
-    final int S = this.glbPara.timestamps;
+  private void collectLifelineStatus(GlobalRef<WorkerCoord<Queue, T>> globalRef) {
+    final GlobalRef<Logger[]> logs = new GlobalRef<>(new Logger[p]);
 
-    if (1024 < p) {
-      Function<Integer, Logger> filling =
-          (Function<Integer, Logger> & Serializable)
-              (Integer i) ->
-                  at(
-                      places().get(i * 32),
-                      () -> {
-                        final int h = here().id;
-                        final int n = Math.min(32, P - h);
+    finish(() -> {
+      for (Place p : places()) {
+        asyncAt(p, () -> {
+          globalRef.get().logger.stoppingTimeToResult();
+          final Logger logRemote = globalRef.get().logger.get();
+          final int idRemote = here().id;
+          asyncAt(logs.home(), () -> {
+            logs.get()[idRemote] = logRemote;
+          });
+        });
+      }
+    });
 
-                        Function<Integer, Logger> newFilling =
-                            (Function<Integer, Logger> & Serializable)
-                                (j ->
-                                    at(
-                                        places().get(h + j),
-                                        () ->
-                                            globalRef
-                                                .get()
-                                                .logger
-                                                .get((V & GLBParameters.SHOW_GLB_FLAG) != 0)));
-
-                        Logger[] newLogs = fillLogger(new Logger[n], newFilling);
-                        Logger newLog = new Logger(S);
-                        newLog.collect(newLogs);
-                        return newLog;
-                      });
-      logs = fillLogger(new Logger[p / 32], filling);
-    } else {
-      Function<Integer, Logger> newFilling =
-          (Function<Integer, Logger> & Serializable)
-              i ->
-                  at(
-                      places().get(i),
-                      () -> globalRef.get().logger.get((V & GLBParameters.SHOW_GLB_FLAG) != 0));
-
-      logs = fillLogger(new Logger[p], newFilling);
+    for (final Logger l : logs.get()) {
+      System.out.println(l);
     }
 
     Logger log = new Logger(glbPara.timestamps);
-    log.collect(logs);
+    log.collect(logs.get());
     log.stats();
 
     try {
@@ -257,50 +169,36 @@ public class GLBCoord<Queue extends TaskQueueCoord<Queue, T>, T extends Serializ
     } catch (IOException e) {
       e.printStackTrace();
     }
-    return log;
   }
 
-  protected T[] collectResults(long now) {
-    this.collectResultTime = System.nanoTime();
-    this.rootGlbR = this.globalRef.get().queue.getResult();
 
-    finish(
-        () -> {
-          for (final Place p : places()) {
-            if (here().id == p.id) {
-              consolePrinter.println(
-                  here() + "(in collectResults): count_1 = " + +globalRef.get().queue.count());
-              consolePrinter.println(
-                  here() + "(in collectResults): size_1 = " + globalRef.get().queue.size());
-              continue;
-            }
-            try {
-              TaskQueueCoord<Queue, T> q = at(p, () -> globalRef.get().queue);
-              consolePrinter.println(
-                  at(
-                      p,
-                      () ->
-                          here()
-                              + "(in collectResults): count_2 = "
-                              + +globalRef.get().queue.count()));
-              consolePrinter.println(
-                  at(
-                      p,
-                      () ->
-                          here()
-                              + "(in collectResults): size_2 = "
-                              + globalRef.get().queue.size()));
-              globalRef.get().queue.mergeResult(q);
-            } catch (final DeadPlaceException e) {
-              async(
-                  () -> {
-                    throw e;
-                  });
-            }
-          }
+  protected T[] collectResults() {
+    this.collectResultTime = System.nanoTime();
+
+    GlobalRef<TaskQueueCoord[]> globalResults = new GlobalRef<>(new TaskQueueCoord[places().size()]);
+    finish(() -> {
+      for (final Place p : places()) {
+        asyncAt(p, () -> {
+          final Queue qRemote = this.globalRef.get().queue;
+          final int idRemote = here().id;
+          asyncAt(globalResults.home(), () -> {
+            globalResults.get()[idRemote] = qRemote;
+          });
         });
+      }
+    });
+
+    TaskQueueCoord result = null;
+    for (final TaskQueueCoord q : globalResults.get()) {
+      if (null == result) {
+        result = q;
+        continue;
+      }
+      result.mergeResult(q);
+    }
+    this.rootGlbR = result.getResult();
     collectResultTime = System.nanoTime() - collectResultTime;
-    return globalRef.get().queue.getResult().getResult();
+    return this.rootGlbR.getResult();
   }
 
   /**
@@ -316,17 +214,5 @@ public class GLBCoord<Queue extends TaskQueueCoord<Queue, T>, T extends Serializ
         asyncAt(place(i), () -> globalRef.get().queue.printLog());
       }
     });
-  }
-
-
-  private Logger[] fillLogger(Logger[] arr, Function<Integer, Logger> function) {
-    long now = System.nanoTime();
-    for (int i = 0; i < arr.length; i++) {
-      arr[i] = function.apply(i);
-      final long l = System.nanoTime();
-      consolePrinter.println("" + (l - now) / 1E9);
-      now = l;
-    }
-    return arr;
   }
 }

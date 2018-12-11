@@ -11,24 +11,27 @@ import apgas.GlobalRuntime;
 import apgas.Place;
 import apgas.SerializableCallable;
 import apgas.impl.GlobalRuntimeImpl;
+import apgas.util.GlobalRef;
 import apgas.util.PlaceLocalObject;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.ICompletableFuture;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.Member;
 import com.hazelcast.core.Partition;
-import com.hazelcast.transaction.TransactionalTaskContext;
+import com.hazelcast.map.EntryBackupProcessor;
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.Collection;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 import utils.ConsolePrinter;
 import utils.Pair;
+import utils.ReadOnlyEntryProcessor;
 
 public class IncFTGLB<Queue extends IncFTTaskQueue<Queue, T>, T extends Serializable>
     implements Serializable {
@@ -44,6 +47,7 @@ public class IncFTGLB<Queue extends IncFTTaskQueue<Queue, T>, T extends Serializ
   IncFTGLBParameters glbPara;
   IncFTWorker<Queue, T> worker;
   private int p = places().size();
+  final transient IMap<Integer, IncQueueWrapper<Queue, T>> iMapBackup;
 
   public IncFTGLB(SerializableCallable<Queue> init, IncFTGLBParameters glbPara, boolean tree) {
     this.glbPara = glbPara;
@@ -61,7 +65,7 @@ public class IncFTGLB<Queue extends IncFTTaskQueue<Queue, T>, T extends Serializ
     backupMapConfig.setBackupCount(glbPara.backupCount);
     backupMapConfig.setInMemoryFormat(InMemoryFormat.OBJECT);
     this.hz.getConfig().addMapConfig(backupMapConfig);
-    IMap<Integer, IncQueueWrapper<Queue, T>> iMapBackup = hz.getMap(backupMapName);
+    iMapBackup = hz.getMap(backupMapName);
 
     while (hz.getPartitionService().isClusterSafe() == false) {
       System.out.println("waiting until cluster is safe...");
@@ -150,14 +154,14 @@ public class IncFTGLB<Queue extends IncFTTaskQueue<Queue, T>, T extends Serializ
    *
    * @param start The method that (Root) initializes the workload that can start computation. Other
    *     places first get their workload by stealing.
-   * @return {@link #collectResults(long)}
+   * @return {@link #collectResults()}
    */
   public T[] run(Runnable start) {
     crunchNumberTime = System.nanoTime();
     worker.main(start);
     long now = System.nanoTime();
     crunchNumberTime = now - crunchNumberTime;
-    T[] r = collectResults(now);
+    T[] r = collectResults();
     end(r);
     return r;
   }
@@ -166,14 +170,14 @@ public class IncFTGLB<Queue extends IncFTTaskQueue<Queue, T>, T extends Serializ
    * Run method. This method is called when users can know the workload upfront and initialize the
    * workload in {@link IncFTTaskQueue}
    *
-   * @return {@link #collectResults(long)}
+   * @return {@link #collectResults()}
    */
   public T[] runParallel() {
     crunchNumberTime = System.nanoTime();
     IncFTWorker.broadcast(worker);
     long now = System.nanoTime();
     crunchNumberTime = now - crunchNumberTime;
-    T[] r = collectResults(now);
+    T[] r = collectResults();
     end(r);
     return r;
   }
@@ -186,72 +190,48 @@ public class IncFTGLB<Queue extends IncFTTaskQueue<Queue, T>, T extends Serializ
    * @param r result to println
    */
   private void end(T[] r) {
-    // println result
     if (0 != (glbPara.v & IncFTGLBParameters.SHOW_RESULT_FLAG)) {
       rootGlbR.display(r);
     }
-    // println overall timing information
+
     if (0 != (glbPara.v & IncFTGLBParameters.SHOW_TIMING_FLAG)) {
       System.out.println("Setup time:" + ((setupTime) / 1E9));
       System.out.println("Process time:" + ((crunchNumberTime) / 1E9));
       System.out.println("Result reduce time:" + (collectResultTime / 1E9));
     }
 
-    // println log
     if (0 != (glbPara.v & IncFTGLBParameters.SHOW_TASKFRAME_LOG_FLAG)) {
 //      printLog();
     }
 
-    // collect glb statistics and println it out
     if (0 != (glbPara.v & IncFTGLBParameters.SHOW_GLB_FLAG)) {
       collectLifelineStatus();
     }
   }
 
-  /** Collect IMap.FTGLB statistics */
+  /** Collect IncFTGLB statistics */
   private void collectLifelineStatus() {
-    IncFTLogger[] logs;
-    final int V = this.glbPara.v;
-    final int P = p;
-    final int S = this.glbPara.timestamps;
+    final GlobalRef<IncFTLogger[]> logs = new GlobalRef<>(new IncFTLogger[p]);
 
-    if (1024 < p) {
-      Function<Integer, IncFTLogger> filling =
-          (Function<Integer, IncFTLogger> & Serializable)
-              (Integer i) ->
-                  at(
-                      places().get(i * 32),
-                      () -> {
-                        final int h = here().id;
-                        final int n = Math.min(32, P - h);
-
-                        Function<Integer, IncFTLogger> newFilling =
-                            (Function<Integer, IncFTLogger> & Serializable)
-                                (j ->
-                                    at(
-                                        places().get(h + j),
-                                        () ->
-                                            worker.logger.get(
-                                                (V & IncFTGLBParameters.SHOW_GLB_FLAG) != 0)));
-
-                        IncFTLogger[] newLogs = fillLogger(new IncFTLogger[n], newFilling);
-                        IncFTLogger newLog = new IncFTLogger(S);
-                        newLog.collect(newLogs);
-                        return newLog;
-                      });
-      logs = fillLogger(new IncFTLogger[p / 32], filling);
-    } else {
-      int newP = places().size();
-      logs = new IncFTLogger[newP];
-      int i = 0;
-      for (Place place : places()) {
-        logs[i] = at(place, () -> worker.logger.get(true));
-        i++;
+    finish(() -> {
+      for (Place p : places()) {
+        asyncAt(p, () -> {
+          worker.logger.stoppingTimeToResult();
+          final IncFTLogger logRemote = worker.logger.get();
+          final int idRemote = here().id;
+          asyncAt(logs.home(), () -> {
+            logs.get()[idRemote] = logRemote;
+          });
+        });
       }
+    });
+
+    for (final IncFTLogger l : logs.get()) {
+      System.out.println(l);
     }
 
     IncFTLogger log = new IncFTLogger(glbPara.timestamps);
-    log.collect(logs);
+    log.collect(logs.get());
     log.stats();
 
     try {
@@ -261,49 +241,46 @@ public class IncFTGLB<Queue extends IncFTTaskQueue<Queue, T>, T extends Serializ
     }
   }
 
-  protected T[] collectResults(long now) {
+  protected T[] collectResults() {
     this.collectResultTime = System.nanoTime();
 
     Queue result = null;
 
-    final Collection<IncQueueWrapper<Queue, T>> values =
-        hz.executeTransaction(
-            (TransactionalTaskContext context) -> {
-              return context.<Integer, IncQueueWrapper<Queue, T>>getMap("iMapBackup").values();
-            });
+    final ICompletableFuture futures[] = new ICompletableFuture[p];
 
-    long tmpReduceCount = 0;
-    final IMap<Integer, IncQueueWrapper<Queue, T>> tmpMap = hz.getMap("iMapBackup");
-    for (int i = 0; i < tmpMap.size(); i++) {
-      System.out.println(
-          tmpMap.get(getBackupKey(i)).queue.getResult().getResult()[0]
-              + ", "
-              + tmpMap.get(getBackupKey(i)).queue.count()
-              + ", "
-              + tmpMap.get(getBackupKey(i)).queue.size());
-      tmpReduceCount += tmpMap.get(getBackupKey(i)).queue.count();
+    for (int i = 0; i < futures.length; ++i) {
+      futures[i] = this.iMapBackup.submitToKey(getBackupKey(i), new ReadOnlyEntryProcessor
+          () {
+        @Override
+        public Object process(Map.Entry entry) {
+          return entry.getValue();
+        }
+
+        @Override
+        public EntryBackupProcessor getBackupProcessor() {
+          return null;
+        }
+      });
     }
 
-    System.out.println("tmpReduceCount: " + tmpReduceCount);
-
-    System.out.println("openLoot: ");
-    IMap<Integer, HashMap<Integer, Pair<Long, IncTaskBag>>> iMapOpenLoot =
-        hz.getMap("iMapOpenLoot");
-
-    for (int i = 0; i < iMapOpenLoot.size(); i++) {
-      String tmp = i + ": ";
-      for (Integer key : iMapOpenLoot.get(getBackupKey(i)).keySet()) {
-        Pair<Long, IncTaskBag> pair = iMapOpenLoot.get(getBackupKey(i)).get(key);
-        tmp += pair != null ? ("place: " + key + ", lid: " + pair.getFirst() + "; ") : "";
-      }
-      System.out.println(tmp);
-    }
-
-    for (final IncQueueWrapper<Queue, T> q : values) {
-      if (result == null) {
-        result = q.queue;
+    for (final ICompletableFuture f : futures) {
+      if (null == result) {
+        try {
+          result = ((IncQueueWrapper<Queue, T>)f.get()).queue;
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        } catch (ExecutionException e) {
+          e.printStackTrace();
+        }
+        continue;
       } else {
-        result.mergeResult(q.queue);
+        try {
+          result.mergeResult(((IncQueueWrapper<Queue, T>)f.get()).queue);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        } catch (ExecutionException e) {
+          e.printStackTrace();
+        }
       }
     }
 
@@ -337,16 +314,6 @@ public class IncFTGLB<Queue extends IncFTTaskQueue<Queue, T>, T extends Serializ
         asyncAt(place(i), () -> worker.queue.printLog());
       }
     });
-  }
-
-  private IncFTLogger[] fillLogger(IncFTLogger[] arr, Function<Integer, IncFTLogger> function) {
-    long now = System.nanoTime();
-    for (int i = 0; i < arr.length; i++) {
-      arr[i] = function.apply(i);
-      final long l = System.nanoTime();
-      now = l;
-    }
-    return arr;
   }
 
   private int getBackupKey(int placeID) {
