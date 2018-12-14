@@ -22,14 +22,14 @@ public class GLBParameters implements Serializable {
   public int P;
 
   public GLBParameters() {
-    this.n = 100;
-    this.w = 4;
-    this.l = 4;
-    this.z = computeZ(places().size(), 4);
+    this.n = 511;
+    this.P = places().size();
+    this.l = computeL(P);
+    this.z = computeZ(l, P);
+    this.w = z;
     this.m = 1024;
     this.v = 15;
     this.timestamps = 0;
-    this.P = places().size();
   }
 
   public GLBParameters(int n, int w, int l, int z, int m, int v, int timestamps, int P) {
@@ -43,13 +43,21 @@ public class GLBParameters implements Serializable {
     this.P = P;
   }
 
-  public static int computeZ(long p, int l) {
+  public static int computeZ(int l, int numPlaces) {
     int z0 = 1;
     int zz = l;
-    while (zz < p) {
+    while (zz < numPlaces) {
       z0++;
       zz *= l;
     }
     return z0;
+  }
+
+  public static int computeL(int numPlaces) {
+    int l = 1;
+    while (Math.pow(l, l) < numPlaces) {
+      l++;
+    }
+    return l;
   }
 }

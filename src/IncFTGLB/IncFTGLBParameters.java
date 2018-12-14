@@ -18,7 +18,7 @@ public class IncFTGLBParameters implements Serializable {
   public int m; // max number of thieves
   public int v; // verbose level
   public int timestamps; // >=1 with logging time and n output in cvs, 0=without logging time
-  public int k; // Write cyclic backups every k * n computation-elements
+  public long k; // Write cyclic backups every k * n computation-elements
   public int P; // count of initial places
 
   public int crashNumber; // number for testing cases
@@ -26,17 +26,17 @@ public class IncFTGLBParameters implements Serializable {
   public int backupCount;
 
   public IncFTGLBParameters() {
-    this.n = 100;
-    this.w = 4;
-    this.l = 4;
-    this.z = computeZ(places().size(), 4);
+    this.n = 511;
+    this.P = places().size();
+    this.l = computeL(P);
+    this.z = computeZ(l, P);
+    this.w = z;
     this.m = 1024;
     this.v = 15;
     this.timestamps = 0;
     this.crashNumber = 0;
     this.backupCount = 1;
     this.k = 32768;
-    this.P = places().size();
   }
 
   public IncFTGLBParameters(
@@ -47,7 +47,7 @@ public class IncFTGLBParameters implements Serializable {
       int m,
       int v,
       int timestamps,
-      int k,
+      long k,
       int crashNumber,
       int backupCount,
       int P) {
@@ -64,13 +64,21 @@ public class IncFTGLBParameters implements Serializable {
     this.P = P;
   }
 
-  public static int computeZ(long p, int l) {
+  public static int computeZ(int l, int numPlaces) {
     int z0 = 1;
     int zz = l;
-    while (zz < p) {
+    while (zz < numPlaces) {
       z0++;
       zz *= l;
     }
     return z0;
+  }
+
+  public static int computeL(int numPlaces) {
+    int l = 1;
+    while (Math.pow(l, l) < numPlaces) {
+      l++;
+    }
+    return l;
   }
 }

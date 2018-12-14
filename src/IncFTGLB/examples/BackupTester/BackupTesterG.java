@@ -1,5 +1,7 @@
 package IncFTGLB.examples.BackupTester;
 
+import static IncFTGLB.IncFTGLBParameters.computeL;
+import static IncFTGLB.IncFTGLBParameters.computeZ;
 import static apgas.Constructs.places;
 
 import IncFTGLB.IncFTGLB;
@@ -40,9 +42,8 @@ public class BackupTesterG {
 
     int n = Integer.parseInt(cmd.getOptionValue("n", "1"));
     int t = Integer.parseInt(cmd.getOptionValue("t", "1000"));
-    int l = Integer.parseInt(cmd.getOptionValue("l", "2"));
     int m = Integer.parseInt(cmd.getOptionValue("m", "1024"));
-    int k = Integer.parseInt(cmd.getOptionValue("k", "10"));
+    long k = Long.parseLong(cmd.getOptionValue("k", "10"));
     int timestamps = Integer.parseInt(cmd.getOptionValue("timestamps", "0"));
     int crashNumber = Integer.parseInt(cmd.getOptionValue("crashNumber", "6"));
     int backupCount = Integer.parseInt(cmd.getOptionValue("backupCount", "6"));
@@ -62,15 +63,8 @@ public class BackupTesterG {
             cmd.getOptionValue("v", String.valueOf(IncFTGLBParameters.SHOW_RESULT_FLAG)));
     int numPlaces = places().size();
 
-    int z0 = 1;
-    int zz = l;
-    while (zz < numPlaces) {
-      z0++;
-      zz *= l;
-      System.out.println("calculating zz...");
-    }
-
-    int z = z0;
+    int l = Integer.parseInt(cmd.getOptionValue("l", String.valueOf(computeL(numPlaces))));
+    int z = computeZ(l, numPlaces);
     int w = Integer.parseInt(cmd.getOptionValue("w", String.valueOf(z)));
 
     System.out.println(

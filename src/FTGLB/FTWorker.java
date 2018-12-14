@@ -77,7 +77,7 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
   private final Random random = new Random(here().id);
 
   /** Cycle of writing regular backups */
-  private final int k;
+  private final long k;
 
   /** states of worker */
   private final transient AtomicBoolean active = new AtomicBoolean(false);
@@ -157,7 +157,7 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
   private String openLootMapName;
 
   /** Write cyclic backups every k * n computation-elements. */
-  private int currentK;
+  private long currentK;
 
   /**
    * Class constructor
@@ -181,7 +181,7 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
       int m,
       boolean tree,
       int s,
-      int k,
+      long k,
       int crashNumber,
       int backupCount,
       int P,

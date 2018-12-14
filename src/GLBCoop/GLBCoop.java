@@ -129,7 +129,9 @@ public class GLBCoop<Queue extends TaskQueue<Queue, T>, T extends Serializable>
     }
 
     if (0 != (glbPara.v & GLBParameters.SHOW_GLB_FLAG)) {
+      long now = System.nanoTime();
       collectLifelineStatus();
+      System.out.println("Collect Lifelinestatus time:" + ((System.nanoTime() - now) / 1E9));
     }
   }
 

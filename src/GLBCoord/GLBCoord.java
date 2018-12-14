@@ -130,7 +130,9 @@ public class GLBCoord<Queue extends TaskQueueCoord<Queue, T>, T extends Serializ
     }
 
     if (0 != (glbPara.v & GLBParameters.SHOW_GLB_FLAG)) {
+      long now = System.nanoTime();
       collectLifelineStatus(globalRef);
+      System.out.println("Collect Lifelinestatus time:" + ((System.nanoTime() - now) / 1E9));
     }
   }
 

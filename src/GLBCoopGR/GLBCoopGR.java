@@ -131,7 +131,9 @@ public class GLBCoopGR<Queue extends TaskQueueGR<Queue, T>, T extends Serializab
 
     // collect glb statistics and println it out
     if (0 != (glbPara.v & GLBParametersGR.SHOW_GLB_FLAG)) {
+      long now = System.nanoTime();
       collectLifelineStatus(globalRef);
+      System.out.println("Collect Lifelinestatus time:" + ((System.nanoTime() - now) / 1E9));
     }
   }
 

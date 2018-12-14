@@ -81,7 +81,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
    */
   private final Random random = new Random(here().id);
   /** Cycle of writing regular backups */
-  private final int k;
+  private final long k;
   /** states of worker */
   private final transient AtomicBoolean active = new AtomicBoolean(false);
 
@@ -142,7 +142,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
   /** Name of current iMapBackup for openLoots */
   private String openLootMapName;
   /** Write cyclic backups every k * n computation-elements. */
-  private int currentK;
+  private long currentK;
   /**
    * Used for incremental backups Snapshot of stable tasks in current interval This snapshot will be
    * merged into the backup on the next call of writeBackup.
@@ -176,7 +176,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
       int m,
       boolean tree,
       int s,
-      int k,
+      long k,
       int crashNumber,
       int backupCount,
       int P,

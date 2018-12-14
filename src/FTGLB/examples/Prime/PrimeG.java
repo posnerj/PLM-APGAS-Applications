@@ -1,5 +1,7 @@
 package FTGLB.examples.Prime;
 
+import static FTGLB.FTGLBParameters.computeL;
+import static FTGLB.FTGLBParameters.computeZ;
 import static apgas.Constructs.places;
 
 import FTGLB.FTGLB;
@@ -43,9 +45,8 @@ public class PrimeG {
     int n = Integer.parseInt(cmd.getOptionValue("n", "511"));
     int f = Integer.parseInt(cmd.getOptionValue("f", "0"));
     int t = Integer.parseInt(cmd.getOptionValue("t", "1000000"));
-    int l = Integer.parseInt(cmd.getOptionValue("l", "32"));
     int m = Integer.parseInt(cmd.getOptionValue("m", "1024"));
-    int k = Integer.parseInt(cmd.getOptionValue("k", "2048"));
+    long k = Long.parseLong(cmd.getOptionValue("k", "2048"));
     int timestamps = Integer.parseInt(cmd.getOptionValue("timestamps", "0"));
     int crashNumber = Integer.parseInt(cmd.getOptionValue("crashNumber", "0"));
     int backupCount = Integer.parseInt(cmd.getOptionValue("backupCount", "1"));
@@ -64,15 +65,8 @@ public class PrimeG {
         Integer.parseInt(cmd.getOptionValue("v", String.valueOf(FTGLBParameters.SHOW_RESULT_FLAG)));
     int numPlaces = places().size();
 
-    int z0 = 1;
-    int zz = l;
-    while (zz < numPlaces) {
-      z0++;
-      zz *= l;
-      System.out.println("calculating zz...");
-    }
-
-    int z = z0;
+    int l = Integer.parseInt(cmd.getOptionValue("l", String.valueOf(computeL(numPlaces))));
+    int z = computeZ(l, numPlaces);
     int w = Integer.parseInt(cmd.getOptionValue("w", String.valueOf(z)));
 
     System.out.println(
@@ -125,10 +119,20 @@ public class PrimeG {
   }
 
   public static void main(String[] args) throws ParseException {
-    System.out.println("Start date: " + Calendar.getInstance().getTime());
-    System.out.println(PrimeG.class.getName() + " starts");
-    Integer[] result = compute(args);
-    System.out.println("Result: " + result[0]);
-    System.out.println("End date: " + Calendar.getInstance().getTime());
+    int n = Integer.getInteger(utils.Constants.benchmarkIterations, 1);
+    System.out.println("benchmarkIterations: " + n);
+    for (int i = 0; i < n; i++) {
+      System.out.println("Iteration: " + i + ", start date: " + Calendar.getInstance().getTime());
+
+      System.out.println(PrimeG.class.getName() + " starts");
+      Integer[] result = compute(args);
+      System.out.println("Result: " + result[0]);
+
+      if (i != (n - 1)) {
+        System.out.println("Result of run " + i + " is: " + result[0]);
+        System.out.println("Iteration: " + i + ", end date: " + Calendar.getInstance().getTime());
+        System.out.println("\n\n\n---------------------------------------------------------\n\n\n");
+      }
+    }
   }
 }

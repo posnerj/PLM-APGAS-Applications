@@ -120,7 +120,6 @@ public class IncFTGLB<Queue extends IncFTTaskQueue<Queue, T>, T extends Serializ
                 glbPara.P,
                 this.placeKeyMap);
 
-    System.out.println(places());
     ConsolePrinter.getInstance().println(placeKeyMap.toString());
     this.worker = PlaceLocalObject.make(places(), workerInit);
 
@@ -205,7 +204,9 @@ public class IncFTGLB<Queue extends IncFTTaskQueue<Queue, T>, T extends Serializ
     }
 
     if (0 != (glbPara.v & IncFTGLBParameters.SHOW_GLB_FLAG)) {
+      long now = System.nanoTime();
       collectLifelineStatus();
+      System.out.println("Collect Lifelinestatus time:" + ((System.nanoTime() - now) / 1E9));
     }
   }
 

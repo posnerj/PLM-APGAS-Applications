@@ -1,5 +1,7 @@
 package GLBCoopGR.examples.SyntheticBenchmark;
 
+import static GLBCoop.GLBParameters.computeL;
+import static GLBCoop.GLBParameters.computeZ;
 import static apgas.Constructs.places;
 
 import GLBCoopGR.GLBCoopGR;
@@ -49,7 +51,6 @@ public class SyntheticG {
     int g = Integer.parseInt(cmd.getOptionValue("g", "1"));
     int d = Integer.parseInt(cmd.getOptionValue("d", "7"));
     int n = Integer.parseInt(cmd.getOptionValue("n", "511"));
-    int l = Integer.parseInt(cmd.getOptionValue("l", "32"));
     int m = Integer.parseInt(cmd.getOptionValue("m", "1024"));
     int timestamps = Integer.parseInt(cmd.getOptionValue("timestamps", "0"));
 
@@ -69,15 +70,8 @@ public class SyntheticG {
         Integer.parseInt(cmd.getOptionValue("v", String.valueOf(GLBParametersGR.SHOW_RESULT_FLAG)));
     int numPlaces = places().size();
 
-    int z0 = 1;
-    int zz = l;
-    while (zz < numPlaces) {
-      z0++;
-      zz *= l;
-      System.out.println("calculating zz...");
-    }
-
-    int z = z0;
+    int l = Integer.parseInt(cmd.getOptionValue("l", String.valueOf(computeL(numPlaces))));
+    int z = computeZ(l, numPlaces);
     int w = Integer.parseInt(cmd.getOptionValue("w", String.valueOf(z)));
 
     StringBuilder output = new StringBuilder();
@@ -123,16 +117,25 @@ public class SyntheticG {
   }
 
   public static void main(String[] args) {
-    System.out.println("Start date: " + Calendar.getInstance().getTime());
-    System.out.println(SyntheticG.class.getName() + " starts");
-    Long[] result = new Long[0];
-    try {
-      result = compute(args);
-    } catch (ParseException e) {
-      e.printStackTrace();
-    }
+    int n = Integer.getInteger(utils.Constants.benchmarkIterations, 1);
+    System.out.println("benchmarkIterations: " + n);
+    for (int i = 0; i < n; i++) {
+      System.out.println("Iteration: " + i + ", start date: " + Calendar.getInstance().getTime());
+      System.out.println(SyntheticG.class.getName() + " starts");
+      Long[] result = new Long[0];
+      try {
+        result = compute(args);
+      } catch (ParseException e) {
+        e.printStackTrace();
+      }
 
-    System.out.println("Result of run is: " + result[0]);
-    System.out.println("End date: " + Calendar.getInstance().getTime());
+      System.out.println("Result of run is: " + result[0]);
+
+      if (i != (n - 1)) {
+        System.out.println("Result of run " + i + " is: " + result[0]);
+        System.out.println("Iteration: " + i + ", end date: " + Calendar.getInstance().getTime());
+        System.out.println("\n\n\n---------------------------------------------------------\n\n\n");
+      }
+    }
   }
 }

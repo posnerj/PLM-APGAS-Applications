@@ -1,5 +1,7 @@
 package GLBCoop.examples.UTS;
 
+import static GLBCoop.GLBParameters.computeL;
+import static GLBCoop.GLBParameters.computeZ;
 import static apgas.Constructs.places;
 
 import GLBCoop.GLBCoop;
@@ -12,11 +14,12 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import utils.Constants;
 
 public class UTSG {
 
-  static final int COUNT_PLACES = 4;
-  static final int COUNT_THREADS = 16;
+  static final int COUNT_PLACES = 2;
+  static final int COUNT_THREADS = 2;
 
   public static Long[] compute(String[] args) throws ParseException {
     Options options = new Options();
@@ -41,7 +44,6 @@ public class UTSG {
     int r = Integer.parseInt(cmd.getOptionValue("r", "19"));
     int d = Integer.parseInt(cmd.getOptionValue("d", "13"));
     int n = Integer.parseInt(cmd.getOptionValue("n", "511"));
-    int l = Integer.parseInt(cmd.getOptionValue("l", "32"));
     int m = Integer.parseInt(cmd.getOptionValue("m", "1024"));
     int timestamps = Integer.parseInt(cmd.getOptionValue("timestamps", "0"));
 
@@ -59,15 +61,8 @@ public class UTSG {
         Integer.parseInt(cmd.getOptionValue("v", String.valueOf(GLBParameters.SHOW_RESULT_FLAG)));
     int numPlaces = places().size();
 
-    int z0 = 1;
-    int zz = l;
-    while (zz < numPlaces) {
-      z0++;
-      zz *= l;
-      System.out.println("calculating zz...");
-    }
-
-    int z = z0;
+    int l = Integer.parseInt(cmd.getOptionValue("l", String.valueOf(computeL(numPlaces))));
+    int z = computeZ(l, numPlaces);
     int w = Integer.parseInt(cmd.getOptionValue("w", String.valueOf(z)));
 
     System.out.println(
@@ -89,7 +84,6 @@ public class UTSG {
             + m
             + "   z = "
             + z
-            //                + "   g = " + g
             + "   v = "
             + verbose
             + "   timestamps = "
@@ -108,16 +102,23 @@ public class UTSG {
   }
 
   public static void main(String[] args) {
-    System.out.println("Start date: " + Calendar.getInstance().getTime());
-    System.out.println(UTSG.class.getName() + " starts");
-    Long[] result = new Long[0];
-    try {
-      result = compute(args);
-    } catch (ParseException e) {
-      e.printStackTrace();
-    }
+    int n = Integer.getInteger(Constants.benchmarkIterations, 1);
+    System.out.println("benchmarkIterations: " + n);
+    for (int i = 0; i < n; i++) {
+      System.out.println("Iteration: " + i + ", start date: " + Calendar.getInstance().getTime());
+      System.out.println(UTSG.class.getName() + " starts");
+      Long[] result = new Long[0];
+      try {
+        result = compute(args);
+      } catch (ParseException e) {
+        e.printStackTrace();
+      }
 
-    System.out.println("Result of run is: " + result[0]);
-    System.out.println("End date: " + Calendar.getInstance().getTime());
+      if (i != (n - 1)) {
+        System.out.println("Result of run " + i + " is: " + result[0]);
+        System.out.println("Iteration: " + i + ", end date: " + Calendar.getInstance().getTime());
+        System.out.println("\n\n\n---------------------------------------------------------\n\n\n");
+      }
+    }
   }
 }
