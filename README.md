@@ -9,7 +9,7 @@ Applications for PLM-APGAS: https://github.com/posnerj/PLM-APGAS
 
 Contains PLM-APGAS as git submodule, so use 
 
-    git clone --recurse-submodules
+    git clone --recursive-submodules
     
     
 Contact:  
