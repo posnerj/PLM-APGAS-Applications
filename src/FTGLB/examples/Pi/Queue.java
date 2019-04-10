@@ -5,7 +5,7 @@ import static apgas.Constructs.places;
 
 import FTGLB.FTGLBResult;
 import FTGLB.FTTaskQueue;
-import FTGLB.TaskBag;
+import GLBCoop.TaskBag;
 import java.io.Serializable;
 import java.util.Deque;
 import java.util.LinkedList;

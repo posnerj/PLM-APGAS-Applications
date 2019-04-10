@@ -46,7 +46,7 @@ public class BackupTesterG {
     long k = Long.parseLong(cmd.getOptionValue("k", "10"));
     int timestamps = Integer.parseInt(cmd.getOptionValue("timestamps", "0"));
     int crashNumber = Integer.parseInt(cmd.getOptionValue("crashNumber", "6"));
-    int backupCount = Integer.parseInt(cmd.getOptionValue("backupCount", "6"));
+    int backupCount = Integer.parseInt(cmd.getOptionValue("backupCount", "1"));
 
     if (System.getProperty(Configuration.APGAS_PLACES) == null) {
       System.setProperty(Configuration.APGAS_PLACES, String.valueOf(COUNT_PLACES));

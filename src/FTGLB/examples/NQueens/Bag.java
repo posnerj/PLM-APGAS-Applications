@@ -1,6 +1,6 @@
 package FTGLB.examples.NQueens;
 
-import FTGLB.TaskBag;
+import GLBCoop.TaskBag;
 import java.util.Arrays;
 
 /** Created by jposner on 05.07.17. */

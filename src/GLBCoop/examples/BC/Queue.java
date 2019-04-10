@@ -95,7 +95,7 @@ public class Queue extends BC implements TaskQueue<Queue, Double> {
           }
           this.bfsShortestPath4(s);
         }
-        this.accTime += ((System.nanoTime() - refTime) / 1e9);
+        this.accTime += ((System.nanoTime() - refTime) / 1E9);
         this.state = 0;
     }
     return (0 < this.size);
@@ -215,11 +215,11 @@ public class Queue extends BC implements TaskQueue<Queue, Double> {
 
     @Override
     public void display(Double[] r) {
-      for (int i = 0; i < N; ++i) {
-        if (0.0 != r[i]) {
-          System.out.println("(" + i + ") -> " + sub("" + r[i], 0, 6));
-        }
-      }
+      //      for (int i = 0; i < N; ++i) {
+      //        if (0.0 != r[i]) {
+      //          System.out.println("(" + i + ") -> " + sub("" + r[i], 0, 6));
+      //        }
+      //      }
     }
   }
 }

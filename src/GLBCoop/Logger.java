@@ -267,7 +267,7 @@ public class Logger implements Serializable {
     }
   }
 
-  public synchronized void stats() {
+  public synchronized void stats(long processTime) {
     System.out.println(
         nodesGiven
             + " Task items stolen = "
@@ -277,6 +277,8 @@ public class Logger implements Serializable {
             + " (lifeline).");
     System.out.println(stealsPerpetrated + " successful direct steals.");
     System.out.println(lifelineStealsPerpetrated + " successful lifeline steals.");
+    double nodesPerSecond = (double) nodesCount / ((double) processTime / 1E9);
+    System.out.println("Nodescount = " + nodesCount + ", per second = " + nodesPerSecond);
   }
 
   public synchronized void add(Logger other) {

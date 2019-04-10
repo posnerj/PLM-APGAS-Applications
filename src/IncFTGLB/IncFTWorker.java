@@ -12,7 +12,8 @@ import static apgas.Constructs.places;
 import static apgas.Constructs.prevPlace;
 import static apgas.Constructs.uncountedAsyncAt;
 
-import FTGLB.TaskBag;
+import FTGLB.FTLogger;
+import GLBCoop.TaskBag;
 import apgas.DeadPlacesException;
 import apgas.GlobalRuntime;
 import apgas.Place;
@@ -103,7 +104,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
   /** Crash number for testing purposes. */
   private final int crashNumber;
   /** Logger to record the work-stealing status */
-  IncFTLogger logger;
+  FTLogger logger;
   /** Unique Number for loot */
   private long currentLid;
   /** Thieves that send stealing requests */
@@ -193,7 +194,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
     this.waitingForPutWorking = new AtomicBoolean(false);
     this.currentLid = Long.MIN_VALUE;
     this.currentLid++;
-    this.logger = new IncFTLogger(s);
+    this.logger = new FTLogger(s);
 
     this.crashNumber = crashNumber;
 
@@ -286,7 +287,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
     this.queueWrapper = new IncQueueWrapper<Queue, T>(queue, startPlacesSize);
 
     this.iMapBackup.set(getBackupKey(here().id), this.queueWrapper);
-    this.logger.regularBackupsWritten++;
+    this.logger.incrementBackupsWritten(FTLogger.INITBACKUP);
     takeSnapshot();
     lastSnapTasks = snap.minS + snap.taskA.size();
 
@@ -640,7 +641,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
                         transBackupMap.set(getBackupKey(here().id), this.queueWrapper);
                         takeSnapshot();
                         lastSnapTasks = snap.minS + snap.taskA.size();
-                        this.logger.stealBackupsWritten++;
+                        this.logger.incrementBackupsWritten(FTLogger.STEALBACKUP);
                         this.currentK = 0;
                         deadPlaceOpenLoot.put(thiefOfDeadPlaceID, null);
                         transOpenLootMap.set(getBackupKey(iteratorDeadPlaceID), deadPlaceOpenLoot);
@@ -731,7 +732,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
                           transBackupMap.set(getBackupKey(here().id), this.queueWrapper);
                           takeSnapshot();
                           lastSnapTasks = snap.minS + snap.taskA.size();
-                          this.logger.stealBackupsWritten++;
+                          this.logger.incrementBackupsWritten(FTLogger.STEALBACKUP);
                           this.currentK = 0;
 
                           deadPlaceOpenLoot.put(thiefOfDeadPlaceID, null);
@@ -784,7 +785,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
             this.queue.mergeAtBottom(deadPlaceLoot.getSecond());
             takeSnapshot();
             lastSnapTasks = snap.minS + snap.taskA.size();
-            this.logger.stealBackupsWritten++;
+            this.logger.incrementBackupsWritten(FTLogger.STEALBACKUP);
             this.currentK = 0;
             while (true) { // try until transaction is executed
               try {
@@ -1177,10 +1178,10 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
     synchronized (this.lifelineThieves) {
       this.consolePrinter.println("Entered this.lifelineThieves");
       if (this.thieves.size() + this.lifelineThieves.size() > 0) {
-        this.logger.startStoppingTimeWithAutomaticEnd(IncFTLogger.COMMUNICATION);
+        this.logger.startStoppingTimeWithAutomaticEnd(FTLogger.COMMUNICATION);
       } else {
         if (this.currentK >= this.k) {
-          this.writeBackup();
+          this.writeBackup(FTLogger.REGBACKUP);
         }
       }
 
@@ -1201,7 +1202,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
     this.consolePrinter.println("Trying to enter this.lifelineThieves");
     synchronized (this.lifelineThieves) {
       this.consolePrinter.println("Entered this.lifelineThieves");
-      this.logger.startStoppingTimeWithAutomaticEnd(IncFTLogger.COMMUNICATION);
+      this.logger.startStoppingTimeWithAutomaticEnd(FTLogger.COMMUNICATION);
 
       while (this.thieves.size() > 0) {
         final int thief = this.thieves.poll();
@@ -1215,7 +1216,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
                   this.consolePrinter.println("Trying to enter this.waiting");
                   synchronized (this.waiting) {
                     this.consolePrinter.println("Entered this.waiting");
-                    int newId = logger.startStoppingTime(IncFTLogger.COMMUNICATION);
+                    int newId = logger.startStoppingTime(FTLogger.COMMUNICATION);
                     this.waiting.set(false);
                     this.waiting.notifyAll();
                     this.logger.endStoppingTime(newId);
@@ -1234,7 +1235,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
                   this.consolePrinter.println("Trying to enter this.waiting");
                   synchronized (this.waiting) {
                     this.consolePrinter.println("Entered this.waiting");
-                    int newId = logger.startStoppingTime(IncFTLogger.COMMUNICATION);
+                    int newId = logger.startStoppingTime(FTLogger.COMMUNICATION);
                     this.waiting.set(false);
                     this.waiting.notifyAll();
                     this.logger.endStoppingTime(newId);
@@ -1266,7 +1267,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
       return false;
     }
 
-    this.logger.startStoppingTimeWithAutomaticEnd(IncFTLogger.COMMUNICATION);
+    this.logger.startStoppingTimeWithAutomaticEnd(FTLogger.COMMUNICATION);
     final int p = here().id;
     for (int i = 0; i < this.w && this.empty.get(); ++i) {
       this.logger.stealsAttempted++;
@@ -1302,7 +1303,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
         this.consolePrinter.println("Trying to enter this.waiting random");
         synchronized (this.waiting) {
           this.consolePrinter.println("Entered this.waiting random");
-          this.logger.startStoppingTimeWithAutomaticEnd(IncFTLogger.WAITING);
+          this.logger.startStoppingTimeWithAutomaticEnd(FTLogger.WAITING);
           while (this.waiting.get()) {
             try {
               this.waiting.wait();
@@ -1345,7 +1346,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
           this.consolePrinter.println("Trying to enter this.waiting lifeline");
           synchronized (this.waiting) {
             this.consolePrinter.println("Entered this.waiting lifeline");
-            this.logger.startStoppingTimeWithAutomaticEnd(IncFTLogger.WAITING);
+            this.logger.startStoppingTimeWithAutomaticEnd(FTLogger.WAITING);
             while (this.waiting.get()) {
               try {
                 this.waiting.wait();
@@ -1380,7 +1381,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
       this.consolePrinter.println("Trying to enter this.lifelineThieves");
       synchronized (this.lifelineThieves) {
         this.consolePrinter.println("Entered this.lifelineThieves");
-        int newId = logger.startStoppingTime(IncFTLogger.COMMUNICATION);
+        int newId = logger.startStoppingTime(FTLogger.COMMUNICATION);
 
         if (lifeline) {
           this.logger.lifelineStealsReceived++;
@@ -1405,7 +1406,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
                   this.consolePrinter.println("Trying to enter this.waiting rejecting");
                   synchronized (this.waiting) {
                     this.consolePrinter.println("Entered this.waiting rejecting");
-                    int thiefNewId = logger.startStoppingTime(IncFTLogger.COMMUNICATION);
+                    int thiefNewId = logger.startStoppingTime(FTLogger.COMMUNICATION);
                     this.waiting.set(false);
                     this.waiting.notifyAll();
                     this.logger.endStoppingTime(thiefNewId);
@@ -1434,7 +1435,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
                     this.consolePrinter.println("Trying to enter this.waiting Rejecting");
                     synchronized (this.waiting) {
                       this.consolePrinter.println("Entered this.waiting Rejecting");
-                      int thiefNewId = logger.startStoppingTime(IncFTLogger.COMMUNICATION);
+                      int thiefNewId = logger.startStoppingTime(FTLogger.COMMUNICATION);
                       this.waiting.set(false);
                       this.waiting.notifyAll();
                       this.logger.endStoppingTime(thiefNewId);
@@ -1510,7 +1511,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
       this.putWorkingPlaces(here(), true);
     }
 
-    this.logger.startStoppingTimeWithAutomaticEnd(IncFTLogger.PROCESSING);
+    this.logger.startStoppingTimeWithAutomaticEnd(FTLogger.PROCESSING);
     boolean cont;
     int size;
     do {
@@ -1519,7 +1520,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
         this.consolePrinter.println("Trying to enter this.waiting");
         synchronized (this.waiting) {
           this.consolePrinter.println("Entered this.waiting");
-          this.logger.startStoppingTimeWithAutomaticEnd(IncFTLogger.PROCESSING);
+          this.logger.startStoppingTimeWithAutomaticEnd(FTLogger.PROCESSING);
 
           if (this.currentK == 0) { // begin of backup interval
             takeSnapshot();
@@ -1563,7 +1564,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
 
           this.distribute();
 
-          this.logger.startStoppingTimeWithAutomaticEnd(IncFTLogger.PROCESSING);
+          this.logger.startStoppingTimeWithAutomaticEnd(FTLogger.PROCESSING);
         }
         this.consolePrinter.println("Left this.waiting");
 
@@ -1578,7 +1579,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
       synchronized (this.waiting) {
         this.consolePrinter.println("Entered this.waiting 2");
         cont = this.steal() || 0 < this.queue.size();
-        this.logger.startStoppingTimeWithAutomaticEnd(IncFTLogger.PROCESSING);
+        this.logger.startStoppingTimeWithAutomaticEnd(FTLogger.PROCESSING);
         this.active.set(cont);
         size = this.queue.size();
       }
@@ -1586,12 +1587,12 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
     } while (cont);
 
     takeSnapshot();
-    this.writeBackup();
+    this.writeBackup(FTLogger.FINALBACKUP);
 
     crashPlace(2, 2, 0);
 
     this.reject();
-    this.logger.startStoppingTimeWithAutomaticEnd(IncFTLogger.IDLING);
+    this.logger.startStoppingTimeWithAutomaticEnd(FTLogger.IDLING);
 
     this.putWorkingPlaces(here(), false);
 
@@ -1845,7 +1846,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
             + " lifeline="
             + lifeline);
 
-    this.logger.startStoppingTimeWithAutomaticEnd(IncFTLogger.COMMUNICATION);
+    this.logger.startStoppingTimeWithAutomaticEnd(FTLogger.COMMUNICATION);
 
     final int h = here().id;
     final int s = source;
@@ -1980,10 +1981,10 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
 
   private void writeStealBackupVictim(long nStolen) {
     this.consolePrinter.println("Trying to enter this.waiting");
+    this.logger.startWriteBackup();
     synchronized (this.waiting) {
-      this.logger.startWriteBackup();
       this.consolePrinter.println("Entered this.waiting");
-      this.logger.startStoppingTimeWithAutomaticEnd(IncFTLogger.COMMUNICATION);
+      this.logger.startStoppingTimeWithAutomaticEnd(FTLogger.COMMUNICATION);
       try {
         this.consolePrinter.println(
             "Before: minS=" + this.snap.minS + ", lastSnapTasks=" + this.lastSnapTasks);
@@ -2112,7 +2113,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
         takeSnapshot();
         this.lastSnapTasks = this.snap.minS + this.snap.taskA.size();
       }
-      this.logger.stealBackupsWritten++;
+      this.logger.incrementBackupsWritten(FTLogger.STEALBACKUP);
       this.logger.stopWriteBackup();
     }
     this.consolePrinter.println("Left this.waiting");
@@ -2121,10 +2122,10 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
   private void writeStealBackupThief(long nStolen, int source) {
     this.consolePrinter.println("Trying to enter this.waiting");
     boolean emptyPoolSituation = false;
+    this.logger.startWriteBackup();
     synchronized (this.waiting) {
-      this.logger.startWriteBackup();
       this.consolePrinter.println("Entered this.waiting");
-      this.logger.startStoppingTimeWithAutomaticEnd(IncFTLogger.COMMUNICATION);
+      this.logger.startStoppingTimeWithAutomaticEnd(FTLogger.COMMUNICATION);
       try {
         final IncTaskBag tasksToBackup = queue.getFromBottom(nStolen, 0);
         final long lid = queueWrapper.getReceivedLid(source);
@@ -2219,7 +2220,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
         takeSnapshot();
         this.lastSnapTasks = this.snap.minS + this.snap.taskA.size();
       }
-      this.logger.stealBackupsWritten++;
+      this.logger.incrementBackupsWritten(FTLogger.STEALBACKUP);
       this.logger.stopWriteBackup();
     }
     this.consolePrinter.println("Left this.waiting");
@@ -2231,12 +2232,12 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
   }
 
   /** Merges the min-snapshot into iMapBackup. */
-  private void writeBackup() {
+  private void writeBackup(int backupKind) {
     this.consolePrinter.println("Trying to enter this.waiting");
+    this.logger.startWriteBackup();
+    this.logger.startStoppingTimeWithAutomaticEnd(FTLogger.COMMUNICATION);
     synchronized (this.waiting) {
-      this.logger.startWriteBackup();
       this.consolePrinter.println("Entered this.waiting");
-      this.logger.startStoppingTimeWithAutomaticEnd(IncFTLogger.COMMUNICATION);
       try {
         this.consolePrinter.println(
             "Before: minS=" + this.snap.minS + ", lastSnapTasks=" + this.lastSnapTasks);
@@ -2332,7 +2333,7 @@ public final class IncFTWorker<Queue extends IncFTTaskQueue<Queue, T>, T extends
         takeSnapshot();
         this.lastSnapTasks = this.snap.minS + this.snap.taskA.size();
       }
-      this.logger.regularBackupsWritten++;
+      this.logger.incrementBackupsWritten(backupKind);
       this.logger.stopWriteBackup();
     }
     this.consolePrinter.println("Left this.waiting");

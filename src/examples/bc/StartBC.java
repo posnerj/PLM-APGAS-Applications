@@ -1,8 +1,9 @@
 package examples.bc;
 
-import static apgas.Constructs.asyncAny;
 import static apgas.Constructs.enableStaticDistribution;
 import static apgas.Constructs.finishAsyncAny;
+import static apgas.Constructs.here;
+import static apgas.Constructs.numLocalWorkers;
 import static apgas.Constructs.places;
 import static apgas.Constructs.reduceAsyncAny;
 import static apgas.Constructs.staticAsyncAny;
@@ -14,6 +15,7 @@ import apgas.SerializableJob;
 import apgas.impl.Config;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import utils.Rmat;
 
 /** Created by jposner on 15.03.17. */
@@ -33,14 +35,14 @@ public class StartBC {
     final int numThreads = Integer.parseInt(System.getProperty(Configuration.APGAS_THREADS));
 
     int seed = 2;
-    int n = 13;
+    int n = 3;
     double a = 0.55;
     double b = 0.1;
     double c = 0.1;
     double d = 0.25;
     int permute = 1;
 
-    if (args.length == 1) {
+    if (args.length >= 1) {
       n = Integer.parseInt(args[0]);
     }
 
@@ -83,46 +85,70 @@ public class StartBC {
 
     end = System.nanoTime();
     System.out.println("staticInit time: " + ((end - start) / 1E9D));
-    start = System.nanoTime();
 
-    final int bagSize = 32;
-    final int stepSize = (int) Math.ceil((double) N / (double) places().size());
+    final int tasksProWorker;
+    if (args.length >= 2) {
+      tasksProWorker = Integer.parseInt(args[1]);
+    } else {
+      tasksProWorker = 32;
+    }
+
+    final int numTasks = tasksProWorker * numLocalWorkers() * places().size();
+    final int taskSize = N / numTasks;
+    System.out.println("numTasks: " + numTasks);
+    System.out.println("taskSize: " + taskSize);
+    System.out.println("tasksProWorker: " + tasksProWorker);
 
     if (places().size() == 1) {
+      ArrayList<SerializableJob> list = new ArrayList<>();
+      for (int i = 0; i < N; i++) {
+        final int from = i;
+        i += taskSize;
+        final int to = Math.min(i, N);
+        list.add(
+            () -> {
+              BC.compute(from, to);
+            });
+        i--;
+      }
+      start = System.nanoTime();
       finishAsyncAny(
           () -> {
-            for (int i = 0; i < N; i++) {
-              final int from = i;
-              i += bagSize;
-              final int to = Math.min(i, N);
-              asyncAny(
-                  () -> {
-                    BC.compute(from, to);
-                  });
-              i--;
-            }
+            staticAsyncAny(here(), list);
           });
+
     } else {
+
+      HashMap<Integer, ArrayList<SerializableJob>> lists = new HashMap<>();
+
+      int currentPlaceId = 0;
+      ArrayList<SerializableJob> tmpList = new ArrayList<>();
+
+      for (int i = 0; i < N; i++) {
+        final int from = i;
+        i += taskSize;
+        final int to = Math.min(i, N);
+        tmpList.add(
+            () -> {
+              BC.compute(from, to);
+            });
+        i--;
+
+        if (tmpList.size() >= tasksProWorker * numLocalWorkers()
+            && currentPlaceId != (places().size() - 1)) {
+          lists.put(currentPlaceId, tmpList);
+          currentPlaceId++;
+          tmpList = new ArrayList<>();
+        } else if (currentPlaceId == (places().size() - 1)) {
+          lists.put(currentPlaceId, tmpList);
+        }
+      }
+
+      start = System.nanoTime();
       finishAsyncAny(
           () -> {
             for (Place p : places()) {
-              final int currentID = p.id;
-              int from = currentID * stepSize;
-              int to = Math.min(N, (currentID + 1) * stepSize);
-
-              ArrayList<SerializableJob> list = new ArrayList<>();
-              for (int i = from; i < to; i++) {
-
-                final int begin = i;
-                final int until = Math.min(to, begin + bagSize);
-
-                list.add(
-                    () -> {
-                      BC.compute(begin, until);
-                    });
-                i += (bagSize - 1);
-              }
-              staticAsyncAny(p, list);
+              staticAsyncAny(p, lists.get(p.id));
             }
           });
     }

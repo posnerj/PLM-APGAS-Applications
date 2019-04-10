@@ -1,6 +1,6 @@
 package FTGLB.examples.BC;
 
-import FTGLB.TaskBag;
+import GLBCoop.TaskBag;
 
 public class Bag implements TaskBag {
 

@@ -1,7 +1,6 @@
 package GLBCoopGR;
 
 import static apgas.Constructs.asyncAt;
-import static apgas.Constructs.at;
 import static apgas.Constructs.finish;
 import static apgas.Constructs.here;
 import static apgas.Constructs.place;
@@ -50,15 +49,15 @@ public class GLBCoopGR<Queue extends TaskQueueGR<Queue, T>, T extends Serializab
 
     final long l = System.nanoTime();
     this.setupTime = l - this.setupTime;
-
-    for (Place p : places()) {
-      at(
-          p,
-          () -> {
-            globalRef.get().loggerGR.timeReference = l;
-            globalRef.get().loggerGR.startStoppingTimeWithAutomaticEnd(LoggerGR.IDLING);
-          });
-    }
+    //
+    //    for (Place p : places()) {
+    //      at(
+    //          p,
+    //          () -> {
+    //            globalRef.get().loggerGR.timeReference = l;
+    //            globalRef.get().loggerGR.startStoppingTimeWithAutomaticEnd(LoggerGR.IDLING);
+    //          });
+    //    }
 
     consolePrinter.println("[Cooperative.GLBCoopGR " + here() + "]: leaving constructor.");
   }

@@ -19,8 +19,8 @@ apply plugin: 'idea'
 apply plugin: 'eclipse'
 
 
-sourceCompatibility = 11
-targetCompatibility = 11
+sourceCompatibility = 12
+targetCompatibility = 12
 
 subprojects {
     buildscript {
@@ -49,12 +49,14 @@ sourceSets {
 }
 
 
-task copyToLib << {
-    delete fileTree(dir: "lib")
-    [ 'compile','runtime','testCompile' ].each { mode ->
-        copy {
-            from configurations.getByName(mode).files
-            into 'lib'
+task copyToLib {
+    doLast {
+        delete fileTree(dir: "lib")
+        ['compile', 'runtime', 'testCompile'].each { mode ->
+            copy {
+                from configurations.getByName(mode).files
+                into 'lib'
+            }
         }
     }
 }

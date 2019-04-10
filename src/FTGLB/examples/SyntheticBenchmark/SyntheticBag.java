@@ -1,6 +1,6 @@
 package FTGLB.examples.SyntheticBenchmark;
 
-import FTGLB.TaskBag;
+import GLBCoop.TaskBag;
 import GLBCoop.examples.SyntheticBenchmark.SyntheticTask;
 import java.io.Serializable;
 

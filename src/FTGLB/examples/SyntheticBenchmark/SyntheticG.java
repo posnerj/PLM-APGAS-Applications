@@ -59,7 +59,7 @@ public class SyntheticG {
     long k = Long.parseLong(cmd.getOptionValue("k", "12"));
     int timestamps = Integer.parseInt(cmd.getOptionValue("timestamps", "0"));
     int crashNumber = Integer.parseInt(cmd.getOptionValue("crashNumber", "0"));
-    int backupCount = Integer.parseInt(cmd.getOptionValue("backupCount", "6"));
+    int backupCount = Integer.parseInt(cmd.getOptionValue("backupCount", "1"));
 
     if (System.getProperty(Configuration.APGAS_PLACES) == null) {
       System.setProperty(Configuration.APGAS_PLACES, String.valueOf(COUNT_PLACES));
@@ -148,13 +148,9 @@ public class SyntheticG {
         e.printStackTrace();
       }
 
-      System.out.println("Result of run is: " + result[0]);
-
-      if (i != (n - 1)) {
-        System.out.println("Result of run " + i + " is: " + result[0]);
-        System.out.println("Iteration: " + i + ", end date: " + Calendar.getInstance().getTime());
-        System.out.println("\n\n\n---------------------------------------------------------\n\n\n");
-      }
+      System.out.println("Result of run " + i + " is: " + result[0]);
+      System.out.println("Iteration: " + i + ", end date: " + Calendar.getInstance().getTime());
+      System.out.println("\n\n\n---------------------------------------------------------\n\n\n");
     }
   }
 }

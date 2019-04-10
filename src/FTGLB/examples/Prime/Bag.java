@@ -1,6 +1,6 @@
 package FTGLB.examples.Prime;
 
-import FTGLB.TaskBag;
+import GLBCoop.TaskBag;
 import java.io.Serializable;
 import java.util.Deque;
 import java.util.LinkedList;

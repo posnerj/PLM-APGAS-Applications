@@ -1,6 +1,6 @@
 package FTGLB.examples.UTSOneQueue;
 
-import FTGLB.TaskBag;
+import GLBCoop.TaskBag;
 import GLBCoop.examples.UTSOneQueue.TreeNode;
 import java.io.Serializable;
 

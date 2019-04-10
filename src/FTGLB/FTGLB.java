@@ -1,12 +1,12 @@
 package FTGLB;
 
 import static apgas.Constructs.asyncAt;
-import static apgas.Constructs.at;
 import static apgas.Constructs.finish;
 import static apgas.Constructs.here;
 import static apgas.Constructs.place;
 import static apgas.Constructs.places;
 
+import GLBCoop.TaskBag;
 import apgas.GlobalRuntime;
 import apgas.Place;
 import apgas.SerializableCallable;
@@ -90,15 +90,24 @@ public class FTGLB<Queue extends FTTaskQueue<Queue, T>, T extends Serializable>
       int pID = placePartitionIdMap.get(i);
       int key = 0;
       while (this.placeKeyMap.size() < places().size()) {
-        Partition partition = hz.getPartitionService().getPartition(key);
-        if (partition.getPartitionId() == pID) {
-          this.placeKeyMap.put(i, key);
-          break;
+        try {
+          Partition partition = hz.getPartitionService().getPartition(key);
+          if (null == partition) {
+            System.err.println(
+                "FTGLB constructor hz.getPartitionService().getPartition(" + key + ") is null!!!!");
+          }
+
+          if (null != partition && partition.getPartitionId() == pID) {
+            this.placeKeyMap.put(i, key);
+            break;
+          }
+
+        } catch (Throwable t) {
+          t.printStackTrace();
         }
         key++;
       }
     }
-
     SerializableCallable<FTWorker<Queue, T>> workerInit =
         () ->
             new FTWorker<Queue, T>(
@@ -121,13 +130,13 @@ public class FTGLB<Queue extends FTTaskQueue<Queue, T>, T extends Serializable>
     final long l = System.nanoTime();
     this.setupTime = l - this.setupTime;
 
-    for (Place p : places()) {
-      at(
-          p,
-          () -> {
-            worker.logger.startStoppingTimeWithAutomaticEnd(FTLogger.IDLING);
-          });
-    }
+    //    for (Place p : places()) {
+    //      at(
+    //          p,
+    //          () -> {
+    //            worker.logger.startStoppingTimeWithAutomaticEnd(FTLogger.IDLING);
+    //          });
+    //    }
   }
 
   public Queue getTaskQueue() {
@@ -224,7 +233,7 @@ public class FTGLB<Queue extends FTTaskQueue<Queue, T>, T extends Serializable>
 
     FTLogger log = new FTLogger(glbPara.timestamps);
     log.collect(logs.get());
-    log.stats();
+    log.stats(crunchNumberTime);
 
     try {
       log.printStoppedTime();

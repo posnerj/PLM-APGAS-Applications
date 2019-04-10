@@ -4,7 +4,7 @@ import static apgas.Constructs.here;
 
 import FTGLB.FTGLBResult;
 import FTGLB.FTTaskQueue;
-import FTGLB.TaskBag;
+import GLBCoop.TaskBag;
 import GLBCoop.examples.UTSOneQueue.UTS;
 import java.io.Serializable;
 

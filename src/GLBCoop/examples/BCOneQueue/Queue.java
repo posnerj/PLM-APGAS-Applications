@@ -56,7 +56,8 @@ public class Queue extends BC implements TaskQueue<Queue, Double>, Serializable 
 
   @Override
   public void printLog() {
-    System.out.println("[" + here() + "]" + " Count = " + count);
+    System.out.println(
+        "[" + here().id + "]" + " Time = " + this.accTime + " Count = " + this.count);
   }
 
   public boolean process(int n) {
@@ -64,6 +65,7 @@ public class Queue extends BC implements TaskQueue<Queue, Double>, Serializable 
       switch (state) {
         case 0:
           int u = deque.removeLast();
+          refTime = System.nanoTime();
           s = this.verticesToWorkOn[u];
           this.state = 1;
 
@@ -85,6 +87,7 @@ public class Queue extends BC implements TaskQueue<Queue, Double>, Serializable 
           while (!regularQueue.isEmpty()) {
             this.bfsShortestPath4(s);
           }
+          this.accTime += ((System.nanoTime() - refTime) / 1E9);
           this.state = 0;
       }
     }

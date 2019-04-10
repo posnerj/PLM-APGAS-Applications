@@ -25,7 +25,7 @@ public class NQueensG {
 
     options.addOption("b", true, "Branching factor");
     options.addOption("r", true, "Seed (0 <= r < 2^31)");
-    options.addOption("s", true, "Size of NQueens");
+    options.addOption("q", true, "Size of NQueens");
     options.addOption("t", true, "Threshold");
     options.addOption("n", true, "Number of nodes to process before probing. Default 511.");
     options.addOption("w", true, "Number of thieves to send out. Default 1.");
@@ -47,7 +47,7 @@ public class NQueensG {
     int b = Integer.parseInt(cmd.getOptionValue("b", "4"));
     int r = Integer.parseInt(cmd.getOptionValue("r", "19"));
 
-    int s = Integer.parseInt(cmd.getOptionValue("s", "15"));
+    int q = Integer.parseInt(cmd.getOptionValue("q", "15"));
     int t = Integer.parseInt(cmd.getOptionValue("t", "10"));
 
     int n = Integer.parseInt(cmd.getOptionValue("n", "511"));
@@ -83,8 +83,8 @@ public class NQueensG {
             + b
             + "   r = "
             + r
-            + "   s = "
-            + s
+            + "   q = "
+            + q
             + "   t = "
             + t
             + "   w = "
@@ -116,7 +116,7 @@ public class NQueensG {
       System.out.println("Warning: APGAS_RESILIENT is disabled!!!!");
     }
 
-    SerializableCallable<Queue> init = () -> new Queue(s, t, numPlaces);
+    SerializableCallable<Queue> init = () -> new Queue(q, t, numPlaces);
 
     IncFTGLBParameters glbPara =
         new IncFTGLBParameters(
@@ -142,13 +142,9 @@ public class NQueensG {
         e.printStackTrace();
       }
 
-      System.out.println("Result of run is: " + result[0]);
-
-      if (i != (n - 1)) {
-        System.out.println("Result of run " + i + " is: " + result[0]);
-        System.out.println("Iteration: " + i + ", end date: " + Calendar.getInstance().getTime());
-        System.out.println("\n\n\n---------------------------------------------------------\n\n\n");
-      }
+      System.out.println("Result of run " + i + " is: " + result[0]);
+      System.out.println("Iteration: " + i + ", end date: " + Calendar.getInstance().getTime());
+      System.out.println("\n\n\n---------------------------------------------------------\n\n\n");
     }
   }
 }

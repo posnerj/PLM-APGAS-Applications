@@ -5,7 +5,7 @@ import static apgas.Constructs.places;
 
 import FTGLB.FTGLBResult;
 import FTGLB.FTTaskQueue;
-import FTGLB.TaskBag;
+import GLBCoop.TaskBag;
 import GLBCoop.examples.BC.BC;
 import java.io.Serializable;
 import utils.MyIntegerDeque;

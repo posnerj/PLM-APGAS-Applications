@@ -2,7 +2,7 @@ package FTGLB.examples.SyntheticBenchmark;
 
 import FTGLB.FTGLBResult;
 import FTGLB.FTTaskQueue;
-import FTGLB.TaskBag;
+import GLBCoop.TaskBag;
 import GLBCoop.examples.SyntheticBenchmark.Synthetic;
 import java.io.Serializable;
 

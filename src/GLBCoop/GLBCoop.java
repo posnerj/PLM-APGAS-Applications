@@ -1,7 +1,6 @@
 package GLBCoop;
 
 import static apgas.Constructs.asyncAt;
-import static apgas.Constructs.at;
 import static apgas.Constructs.finish;
 import static apgas.Constructs.here;
 import static apgas.Constructs.place;
@@ -52,14 +51,14 @@ public class GLBCoop<Queue extends TaskQueue<Queue, T>, T extends Serializable>
     final long l = System.nanoTime();
     this.setupTime = l - this.setupTime;
 
-    for (Place p : places()) {
-      at(
-          p,
-          () -> {
-            worker.logger.timeReference = l; // TODO hier oder ueber dem for?
-            worker.logger.startStoppingTimeWithAutomaticEnd(Logger.IDLING);
-          });
-    }
+    //    for (Place p : places()) {
+    //      at(
+    //          p,
+    //          () -> {
+    //            worker.logger.timeReference = l; // TODO hier oder ueber dem for?
+    //            worker.logger.startStoppingTimeWithAutomaticEnd(Logger.IDLING);
+    //          });
+    //    }
 
     consolePrinter.println("[Cooperative.GLBCoop " + here() + "]: leaving constructor.");
   }
@@ -163,7 +162,7 @@ public class GLBCoop<Queue extends TaskQueue<Queue, T>, T extends Serializable>
 
     Logger log = new Logger(glbPara.timestamps);
     log.collect(logs.get());
-    log.stats();
+    log.stats(crunchNumberTime);
 
     try {
       log.printStoppedTime();

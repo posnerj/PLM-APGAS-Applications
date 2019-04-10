@@ -1,6 +1,6 @@
 package FTGLB.examples.BCOneQueue;
 
-import FTGLB.TaskBag;
+import GLBCoop.TaskBag;
 import java.io.Serializable;
 
 public class Bag implements TaskBag, Serializable {

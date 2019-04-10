@@ -23,7 +23,7 @@ public class NQueensG {
   public static Long[] compute(String[] args) throws ParseException {
     Options options = new Options();
 
-    options.addOption("s", true, "Size of NQueens");
+    options.addOption("q", true, "Size of NQueens");
     options.addOption("t", true, "Threshold");
     options.addOption("n", true, "Number of nodes to process before probing. Default 511.");
     options.addOption("w", true, "Number of thieves to send out. Default 1.");
@@ -38,7 +38,7 @@ public class NQueensG {
     CommandLineParser parser = new DefaultParser();
     CommandLine cmd = parser.parse(options, args);
 
-    int s = Integer.parseInt(cmd.getOptionValue("s", "13"));
+    int q = Integer.parseInt(cmd.getOptionValue("q", "13"));
     int t = Integer.parseInt(cmd.getOptionValue("t", "10"));
 
     int n = Integer.parseInt(cmd.getOptionValue("n", "511"));
@@ -66,8 +66,8 @@ public class NQueensG {
     System.out.println(
         "places = "
             + numPlaces
-            + "   s = "
-            + s
+            + "   q = "
+            + q
             + "   t = "
             + t
             + "   w = "
@@ -87,7 +87,7 @@ public class NQueensG {
             + "   sysThreads = "
             + sysThreads);
 
-    SerializableCallable<QueueGR> init = () -> new QueueGR(s, t);
+    SerializableCallable<QueueGR> init = () -> new QueueGR(q, t);
 
     GLBParametersGR glbPara = new GLBParametersGR(n, w, l, z, m, verbose, timestamps, numPlaces);
     GLBCoopGR<QueueGR, Long> glb = new GLBCoopGR<QueueGR, Long>(init, glbPara, true);
@@ -111,13 +111,9 @@ public class NQueensG {
         e.printStackTrace();
       }
 
-      System.out.println("Result of run is: " + result[0]);
-
-      if (i != (n - 1)) {
-        System.out.println("Result of run " + i + " is: " + result[0]);
-        System.out.println("Iteration: " + i + ", end date: " + Calendar.getInstance().getTime());
-        System.out.println("\n\n\n---------------------------------------------------------\n\n\n");
-      }
+      System.out.println("Result of run " + i + " is: " + result[0]);
+      System.out.println("Iteration: " + i + ", end date: " + Calendar.getInstance().getTime());
+      System.out.println("\n\n\n---------------------------------------------------------\n\n\n");
     }
   }
 }

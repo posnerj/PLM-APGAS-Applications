@@ -11,6 +11,7 @@ import static apgas.Constructs.places;
 import static apgas.Constructs.prevPlace;
 import static apgas.Constructs.uncountedAsyncAt;
 
+import GLBCoop.TaskBag;
 import apgas.DeadPlacesException;
 import apgas.GlobalRuntime;
 import apgas.Place;
@@ -267,7 +268,7 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
     this.hz.getConfig().addMapConfig(backupMapConfig);
 
     this.iMapBackup = hz.getMap(this.backupMapName);
-    this.logger.regularBackupsWritten++;
+    this.logger.incrementBackupsWritten(FTLogger.INITBACKUP);
 
     this.iMapBackupHandlerRemoveID =
         this.iMapBackup.addPartitionLostListener(
@@ -547,6 +548,7 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
                 try {
                   TransactionOptions txOptions =
                       new TransactionOptions().setTimeout(15, TimeUnit.SECONDS);
+                  this.logger.startWriteBackup();
                   this.hz.executeTransaction(
                       txOptions,
                       (TransactionalTaskContext context) -> {
@@ -556,7 +558,7 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
                             transOpenLootMap = context.getMap(this.openLootMapName);
                         this.queue.merge(deadLoot);
                         transBackupMap.set(getBackupKey(here().id), this.queueWrapper);
-                        this.logger.stealBackupsWritten++;
+                        this.logger.incrementBackupsWritten(FTLogger.STEALBACKUP);
                         this.currentK = 0;
                         deadPlaceOpenLoot.put(thiefOfDeadPlaceID, null);
                         transOpenLootMap.set(getBackupKey(iteratorDeadPlaceID), deadPlaceOpenLoot);
@@ -567,6 +569,7 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
                         transBackupMap.set(getBackupKey(iteratorDeadPlaceID), deadPlaceBackup);
                         return null;
                       });
+                  this.logger.stopWriteBackup();
                   merged = true;
                 } catch (TransactionException transException) {
                   transException.printStackTrace(System.out);
@@ -613,6 +616,7 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
                   try {
                     TransactionOptions txOptions =
                         new TransactionOptions().setTimeout(15, TimeUnit.SECONDS);
+                    this.logger.startWriteBackup();
                     this.hz.executeTransaction(
                         txOptions,
                         (TransactionalTaskContext context) -> {
@@ -623,7 +627,7 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
 
                           this.queue.merge(deadLoot);
                           transBackupMap.set(getBackupKey(here().id), this.queueWrapper);
-                          this.logger.stealBackupsWritten++;
+                          this.logger.incrementBackupsWritten(FTLogger.STEALBACKUP);
                           this.currentK = 0;
                           deadPlaceOpenLoot.put(thiefOfDeadPlaceID, null);
 
@@ -635,6 +639,7 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
                           transBackupMap.set(getBackupKey(iteratorDeadPlaceID), deadPlaceBackup);
                           return null;
                         });
+                    this.logger.stopWriteBackup();
                     merged = true;
                   } catch (TransactionException transException) {
                     transException.printStackTrace(System.out);
@@ -667,6 +672,7 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
             try {
               TransactionOptions txOptions =
                   new TransactionOptions().setTimeout(15, TimeUnit.SECONDS);
+              this.logger.startWriteBackup();
               this.hz.executeTransaction(
                   txOptions,
                   (TransactionalTaskContext context) -> {
@@ -676,7 +682,7 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
                         transOpenLootMap = context.getMap(this.openLootMapName);
                     this.queue.merge(deadPlaceLoot.getSecond());
                     transBackupMap.set(getBackupKey(here().id), this.queueWrapper);
-                    this.logger.stealBackupsWritten++;
+                    this.logger.incrementBackupsWritten(FTLogger.STEALBACKUP);
                     this.currentK = 0;
 
                     integerArrayListHashMap.put(deadPlace.id, null);
@@ -688,6 +694,7 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
                     transBackupMap.set(getBackupKey(deadPlace.id), deadPlaceBackup);
                     return null;
                   });
+              this.logger.stopWriteBackup();
               merged = true;
             } catch (TransactionException transException) {
               transException.printStackTrace(System.out);
@@ -872,7 +879,7 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
       }
 
       this.queueWrapper.setMyLid(lid);
-      this.writeBackup(false);
+      this.writeBackup(FTLogger.STEALBACKUP);
 
       if (thief >= 0) {
         this.logger.lifelineStealsSuffered++;
@@ -931,7 +938,7 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
         e.printStackTrace(System.out);
       }
       this.queueWrapper.setMyLid(lid);
-      this.writeBackup(false);
+      this.writeBackup(FTLogger.STEALBACKUP);
 
       try {
         asyncAt(
@@ -955,7 +962,7 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
         this.logger.startStoppingTimeWithAutomaticEnd(FTLogger.COMMUNICATION);
       } else {
         if (this.currentK >= this.k) {
-          this.writeBackup(true);
+          this.writeBackup(FTLogger.REGBACKUP);
         }
       }
 
@@ -1252,7 +1259,7 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
       }
     } while (cont);
 
-    this.writeBackup(true);
+    this.writeBackup(FTLogger.FINALBACKUP);
 
     this.reject();
     this.logger.startStoppingTimeWithAutomaticEnd(FTLogger.IDLING);
@@ -1502,7 +1509,7 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
         this.processLoot(loot, lifeline, lid, source);
       }
 
-      this.writeBackup(false);
+      this.writeBackup(FTLogger.STEALBACKUP);
 
       try {
         final int thiefID = here().id;
@@ -1564,7 +1571,7 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
         this.processLoot(loot, false, lid, source);
       }
 
-      this.writeBackup(false);
+      this.writeBackup(FTLogger.STEALBACKUP);
     }
     return oldActive;
   }
@@ -1572,12 +1579,12 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
   /**
    * Writes the hole queue to iMapBackup
    *
-   * @param regular is it a regular or steal backup?
+   * @param backupKind which kind of backup?
    */
-  private void writeBackup(boolean regular) {
+  private void writeBackup(int backupKind) {
+    this.logger.startStoppingTimeWithAutomaticEnd(FTLogger.COMMUNICATION);
+    this.logger.startWriteBackup();
     synchronized (this.waiting) {
-      this.logger.startStoppingTimeWithAutomaticEnd(FTLogger.COMMUNICATION);
-      this.logger.startWriteBackup();
       try {
         final QueueWrapper queueToBackup = this.queueWrapper;
 
@@ -1604,11 +1611,8 @@ public final class FTWorker<Queue extends FTTaskQueue<Queue, T>, T extends Seria
       } catch (Throwable throwable) {
         throwable.printStackTrace(System.out);
       }
-      if (regular == true) {
-        this.logger.regularBackupsWritten++;
-      } else {
-        this.logger.stealBackupsWritten++;
-      }
+
+      this.logger.incrementBackupsWritten(backupKind);
       this.logger.stopWriteBackup();
     }
   }

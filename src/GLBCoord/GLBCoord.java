@@ -1,7 +1,6 @@
 package GLBCoord;
 
 import static apgas.Constructs.asyncAt;
-import static apgas.Constructs.at;
 import static apgas.Constructs.finish;
 import static apgas.Constructs.here;
 import static apgas.Constructs.place;
@@ -47,20 +46,19 @@ public class GLBCoord<Queue extends TaskQueueCoord<Queue, T>, T extends Serializ
                 glbPara.m,
                 tree,
                 glbPara.timestamps);
-
     globalRef = new GlobalRef<>(places(), workerInit);
 
     final long l = System.nanoTime();
     this.setupTime = l - this.setupTime;
 
-    for (Place p : places()) {
-      at(
-          p,
-          () -> {
-            globalRef.get().logger.timeReference = l;
-            globalRef.get().logger.startStoppingTimeWithAutomaticEnd(Logger.DEAD);
-          });
-    }
+    //    for (Place p : places()) {
+    //      at(
+    //          p,
+    //          () -> {
+    //            globalRef.get().logger.timeReference = l;
+    //            globalRef.get().logger.startStoppingTimeWithAutomaticEnd(Logger.DEAD);
+    //          });
+    //    }
 
     consolePrinter.println("[GLBCoord.SplitGLB " + here() + "]: leaving constructor.");
   }
@@ -168,7 +166,7 @@ public class GLBCoord<Queue extends TaskQueueCoord<Queue, T>, T extends Serializ
 
     Logger log = new Logger(glbPara.timestamps);
     log.collect(logs.get());
-    log.stats();
+    log.stats(crunchNumberTime);
 
     try {
       log.printStoppedTime();

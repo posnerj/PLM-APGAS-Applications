@@ -25,7 +25,7 @@ public class BCG {
   private static Double[] compute(String[] args) throws ParseException {
 
     Options options = new Options();
-    options.addOption("s", true, "Seed for the random number");
+    options.addOption("seed", true, "Seed for the random number");
     options.addOption("n", true, "Number of vertices = 2^n");
     options.addOption("a", true, "Probability a");
     options.addOption("b", true, "Probability b");
@@ -48,7 +48,7 @@ public class BCG {
     CommandLineParser parser = new DefaultParser();
     CommandLine cmd = parser.parse(options, args);
 
-    int seed = Integer.parseInt(cmd.getOptionValue("s", "2"));
+    int seed = Integer.parseInt(cmd.getOptionValue("seed", "2"));
     int n = Integer.parseInt(cmd.getOptionValue("n", "15")); // 2
     double a = Double.parseDouble(cmd.getOptionValue("a", "0.55"));
     double b = Double.parseDouble(cmd.getOptionValue("b", "0.1"));
@@ -160,10 +160,8 @@ public class BCG {
         e.printStackTrace();
       }
 
-      if (i != (n - 1)) {
-        System.out.println("Iteration: " + i + ", end date: " + Calendar.getInstance().getTime());
-        System.out.println("\n\n\n---------------------------------------------------------\n\n\n");
-      }
+      System.out.println("Iteration: " + i + ", end date: " + Calendar.getInstance().getTime());
+      System.out.println("\n\n\n---------------------------------------------------------\n\n\n");
     }
   }
 }

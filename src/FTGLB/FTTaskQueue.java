@@ -1,5 +1,6 @@
 package FTGLB;
 
+import GLBCoop.TaskBag;
 import java.io.Serializable;
 
 public interface FTTaskQueue<Queue, T extends Serializable> extends Serializable {

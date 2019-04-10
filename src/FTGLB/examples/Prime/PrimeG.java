@@ -128,11 +128,9 @@ public class PrimeG {
       Integer[] result = compute(args);
       System.out.println("Result: " + result[0]);
 
-      if (i != (n - 1)) {
-        System.out.println("Result of run " + i + " is: " + result[0]);
-        System.out.println("Iteration: " + i + ", end date: " + Calendar.getInstance().getTime());
-        System.out.println("\n\n\n---------------------------------------------------------\n\n\n");
-      }
+      System.out.println("Result of run " + i + " is: " + result[0]);
+      System.out.println("Iteration: " + i + ", end date: " + Calendar.getInstance().getTime());
+      System.out.println("\n\n\n---------------------------------------------------------\n\n\n");
     }
   }
 }

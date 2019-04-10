@@ -21,10 +21,14 @@ public class FTLogger implements Serializable {
   public static final int COMMUNICATION = 2;
   public static final int WAITING = 3;
   public static final int IDLING = 4;
-
+  public static final int INITBACKUP = 1;
+  public static final int FINALBACKUP = 2;
+  public static final int REGBACKUP = 3;
+  public static final int STEALBACKUP = 4;
   private static final long serialVersionUID = 1L;
   private static final String FILENAME = "/gnuplot/data";
   private static final String FILEEND = ".csv";
+  private final int p;
   public long nodesCount = 0;
   public long nodesGiven = 0;
   public long lifelineNodesReceived = 0;
@@ -48,15 +52,14 @@ public class FTLogger implements Serializable {
   public long timeWritingBackups = 0;
   public long timeReference;
   public int id = 0;
-
   public int lastAutomaticEnd = 0;
-
-  /* backup stats */
-  public long regularBackupsWritten = 0;
-  public long stealBackupsWritten = 0;
-
   public int placeID = here().id;
   public Double[][] stoppingResult;
+  /* backup stats */
+  private long initBackupsWritten = 0;
+  private long finalBackupsWritten = 0;
+  private long regularBackupsWritten = 0;
+  private long stealBackupsWritten = 0;
   private ArrayList<Integer> timeTypes =
       new ArrayList<>(Arrays.asList(PROCESSING, COMMUNICATION, WAITING, IDLING));
   private int timestamps = 0;
@@ -64,6 +67,7 @@ public class FTLogger implements Serializable {
 
   public FTLogger(int timestamps) {
     this.timeReference = System.nanoTime();
+    p = places().size();
     if (timestamps > 0) {
       System.out.println("Logger: timestamps: " + timestamps);
       this.stoppingTime = new ArrayList<>();
@@ -278,18 +282,59 @@ public class FTLogger implements Serializable {
     }
   }
 
-  public void stats() {
+  public void stats(long processTime) {
+    long nodesGivenPerPlace = nodesGiven / p;
     System.out.println(
         nodesGiven
-            + " Task items stolen = "
+            + " Task items stolen ("
+            + nodesGivenPerPlace
+            + " per place) = "
             + nodesReceived
             + " (direct) + "
             + lifelineNodesReceived
             + " (lifeline).");
-    System.out.println(stealsPerpetrated + " successful direct steals.");
-    System.out.println(lifelineStealsPerpetrated + " successful lifeline steals.");
-    System.out.println(regularBackupsWritten + " regular backups written");
-    System.out.println(stealBackupsWritten + " steal backups written");
+
+    long sumSteals = stealsPerpetrated + lifelineStealsPerpetrated;
+    long sumStealsPerPlace = sumSteals / p;
+    System.out.println(
+        sumSteals
+            + " successful steals ("
+            + sumStealsPerPlace
+            + " per place) = "
+            + stealsPerpetrated
+            + " (direct) + "
+            + lifelineStealsPerpetrated
+            + " (lifeline)");
+
+    long sumBackups =
+        initBackupsWritten + regularBackupsWritten + stealBackupsWritten + finalBackupsWritten;
+    long sumBackupsPerPlace = sumBackups / p;
+
+    System.out.println(
+        sumBackups
+            + " backups written ("
+            + sumBackupsPerPlace
+            + " per place) = "
+            + initBackupsWritten
+            + " (init) + "
+            + regularBackupsWritten
+            + " (regular) + "
+            + stealBackupsWritten
+            + " (steal) + "
+            + finalBackupsWritten
+            + " (final)");
+
+    double timeWritingBackupsPerPlace = (double) timeWritingBackups / (double) p;
+    System.out.println(
+        sub(Double.toString(timeWritingBackups / 1E9), 0, 8)
+            + " sec written backups overall, "
+            + sub(Double.toString(timeWritingBackupsPerPlace / 1E9), 0, 8)
+            + " sec per place, "
+            + sub(Double.toString((timeWritingBackups / 1E9) / sumBackups), 0, 8)
+            + " sec per backup");
+
+    double nodesPerSecond = (double) nodesCount / ((double) processTime / 1E9);
+    System.out.println("Nodescount = " + nodesCount + ", per second = " + nodesPerSecond);
   }
 
   public void add(FTLogger other) {
@@ -299,8 +344,11 @@ public class FTLogger implements Serializable {
     this.stealsPerpetrated += other.stealsPerpetrated;
     this.lifelineNodesReceived += other.lifelineNodesReceived;
     this.lifelineStealsPerpetrated += other.lifelineStealsPerpetrated;
+    this.initBackupsWritten += other.initBackupsWritten;
     this.regularBackupsWritten += other.regularBackupsWritten;
     this.stealBackupsWritten += other.stealBackupsWritten;
+    this.finalBackupsWritten += other.finalBackupsWritten;
+    this.timeWritingBackups += other.timeWritingBackups;
     if (stoppingTime != null && other.stoppingTime != null) {
       System.err.println("Logger: StoppingTime != null");
       stoppingTime.addAll(other.stoppingTime);
@@ -379,13 +427,31 @@ public class FTLogger implements Serializable {
         + " : "
         + (lifelineStealsAttempted - lifelineStealsPerpetrated)
         + " :: "
+        + initBackupsWritten
+        + " : "
         + regularBackupsWritten
         + " : "
         + stealBackupsWritten
+        + " : "
+        + finalBackupsWritten
         + " :: "
         + sub("" + (timeWritingBackups / 1E9), 0, 6)
         + " : "
         + timeReference;
+  }
+
+  public void incrementBackupsWritten(int backupKind) {
+    if (backupKind == INITBACKUP) {
+      this.initBackupsWritten++;
+    } else if (backupKind == FINALBACKUP) {
+      this.finalBackupsWritten++;
+    } else if (backupKind == REGBACKUP) {
+      this.regularBackupsWritten++;
+    } else if (backupKind == STEALBACKUP) {
+      this.stealBackupsWritten++;
+    } else {
+      System.out.println("FTLogger: incrementBackupsWritten: unsupported backupKind");
+    }
   }
 
   private class Time implements Serializable {

@@ -1,12 +1,12 @@
 package IncFTGLB;
 
 import static apgas.Constructs.asyncAt;
-import static apgas.Constructs.at;
 import static apgas.Constructs.finish;
 import static apgas.Constructs.here;
 import static apgas.Constructs.place;
 import static apgas.Constructs.places;
 
+import FTGLB.FTLogger;
 import apgas.GlobalRuntime;
 import apgas.Place;
 import apgas.SerializableCallable;
@@ -94,10 +94,20 @@ public class IncFTGLB<Queue extends IncFTTaskQueue<Queue, T>, T extends Serializ
       int pID = placePartitionIdMap.get(i);
       int key = 0;
       while (this.placeKeyMap.size() < places().size()) {
-        Partition partition = hz.getPartitionService().getPartition(key);
-        if (partition.getPartitionId() == pID) {
-          this.placeKeyMap.put(i, key);
-          break;
+        try {
+          Partition partition = hz.getPartitionService().getPartition(key);
+          if (null == partition) {
+            System.err.println(
+                "FTGLB constructor hz.getPartitionService().getPartition(" + key + ") is null!!!!");
+          }
+
+          if (null != partition && partition.getPartitionId() == pID) {
+            this.placeKeyMap.put(i, key);
+            break;
+          }
+
+        } catch (Throwable t) {
+          t.printStackTrace();
         }
         key++;
       }
@@ -135,13 +145,13 @@ public class IncFTGLB<Queue extends IncFTTaskQueue<Queue, T>, T extends Serializ
     final long l = System.nanoTime();
     this.setupTime = l - this.setupTime;
 
-    for (Place p : places()) {
-      at(
-          p,
-          () -> {
-            worker.logger.startStoppingTimeWithAutomaticEnd(IncFTLogger.IDLING);
-          });
-    }
+    //    for (Place p : places()) {
+    //      at(
+    //          p,
+    //          () -> {
+    //            worker.logger.startStoppingTimeWithAutomaticEnd(FTLogger.IDLING);
+    //          });
+    //    }
   }
 
   public Queue getTaskQueue() {
@@ -212,7 +222,7 @@ public class IncFTGLB<Queue extends IncFTTaskQueue<Queue, T>, T extends Serializ
 
   /** Collect IncFTGLB statistics */
   private void collectLifelineStatus() {
-    final GlobalRef<IncFTLogger[]> logs = new GlobalRef<>(new IncFTLogger[p]);
+    final GlobalRef<FTLogger[]> logs = new GlobalRef<>(new FTLogger[p]);
 
     finish(
         () -> {
@@ -221,7 +231,7 @@ public class IncFTGLB<Queue extends IncFTTaskQueue<Queue, T>, T extends Serializ
                 p,
                 () -> {
                   worker.logger.stoppingTimeToResult();
-                  final IncFTLogger logRemote = worker.logger.get();
+                  final FTLogger logRemote = worker.logger.get();
                   final int idRemote = here().id;
                   asyncAt(
                       logs.home(),
@@ -232,13 +242,13 @@ public class IncFTGLB<Queue extends IncFTTaskQueue<Queue, T>, T extends Serializ
           }
         });
 
-    for (final IncFTLogger l : logs.get()) {
+    for (final FTLogger l : logs.get()) {
       System.out.println(l);
     }
 
-    IncFTLogger log = new IncFTLogger(glbPara.timestamps);
+    FTLogger log = new FTLogger(glbPara.timestamps);
     log.collect(logs.get());
-    log.stats();
+    log.stats(crunchNumberTime);
 
     try {
       log.printStoppedTime();

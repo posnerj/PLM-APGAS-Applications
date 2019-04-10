@@ -1,8 +1,5 @@
 package GLBCoop.examples.BC;
 
-import static apgas.Constructs.here;
-
-import apgas.Configuration;
 import java.io.Serializable;
 import java.util.Arrays;
 import org.apache.commons.cli.CommandLine;
@@ -17,7 +14,7 @@ import utils.X10Random;
 
 public class BC implements Serializable {
 
-  public int N;
+  public transient int N;
 
   public transient int M;
 
@@ -27,7 +24,7 @@ public class BC implements Serializable {
 
   public transient long refTime = 0;
 
-  public transient long accTime = 0;
+  public transient double accTime = 0;
 
   public transient FixedRailQueueInt regularQueue;
 
@@ -48,9 +45,12 @@ public class BC implements Serializable {
 
   public BC(Rmat rmat, int permute) {
     this.graph = rmat.generate();
+    //    System.out.println(graph);
     this.graph.compress();
     this.N = this.graph.numVertices();
+    System.out.println("numVertices: " + this.N);
     this.M = this.graph.numEdges();
+    System.out.println("numEdges: " + this.M);
     this.verticesToWorkOn = new int[N];
     Arrays.setAll(this.verticesToWorkOn, i -> i); // i is the array index
     if (permute > 0) {
@@ -77,8 +77,6 @@ public class BC implements Serializable {
   /** Reads in all the options and calculate betweenness. */
   public static void main(String... args) {
 
-    System.setProperty(Configuration.APGAS_PLACES, String.valueOf(1));
-
     Options options = new Options();
     options.addOption("timestamps", true, "Seed for the random number");
     options.addOption("n", true, "Number of vertices = 2^n");
@@ -94,7 +92,7 @@ public class BC implements Serializable {
     try {
       cmd = parser.parse(options, args);
       int seed = Integer.parseInt(cmd.getOptionValue("timestamps", "2"));
-      int n = Integer.parseInt(cmd.getOptionValue("n", "15"));
+      int n = Integer.parseInt(cmd.getOptionValue("n", "14"));
       double a = Double.parseDouble(cmd.getOptionValue("a", "0.55"));
       double b = Double.parseDouble(cmd.getOptionValue("b", "0.1"));
       double c = Double.parseDouble(cmd.getOptionValue("c", "0.1"));
@@ -122,8 +120,7 @@ public class BC implements Serializable {
       double procTime = (System.nanoTime() - time) / 1e9;
 
       if (verbose > 0) {
-        System.out.println(
-            "[" + here().id + "]" + " Time = " + bc.accTime + " Count = " + bc.count);
+        System.out.println("Time = " + bc.accTime + " Count = " + bc.count);
       }
 
       if (verbose > 2) {
@@ -193,8 +190,14 @@ public class BC implements Serializable {
     final int edgeStart = graph.begin(v);
     final int edgeEnd = graph.end(v);
 
+    //    if (edgeStart >= edgeEnd) {
+    //      count++;// TODO NEW
+    //    }
+
     // Iterate over all its neighbors
     for (int wIndex = edgeStart; wIndex < edgeEnd; ++wIndex) {
+      //      count++; // TODO NEW
+
       // Get the target of the current edge.
       final int w = graph.getAdjacentVertexFromIndex(wIndex);
       final long distanceThroughV = distanceMap[v] + 1L;
@@ -223,7 +226,11 @@ public class BC implements Serializable {
   protected final void bfsShortestPath4(int s) {
     final int w = regularQueue.top();
     final int rev = graph.rev(w);
+    //    if (predecessorCount[w] <= 0) {
+    //      count++; // TODO NEW
+    //    }
     while (predecessorCount[w] > 0) {
+      //      count++; // TODO NEW
       final int v = predecessorMap[rev + (--predecessorCount[w])];
       deltaMap[v] += (((double) sigmaMap[v]) / sigmaMap[w]) * (1.0 + deltaMap[w]);
     }

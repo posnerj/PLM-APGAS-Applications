@@ -1,6 +1,6 @@
 package FTGLB.examples.UTS;
 
-import FTGLB.TaskBag;
+import GLBCoop.TaskBag;
 import utils.SHA1Rand;
 
 public class Bag implements TaskBag {
