@@ -9,10 +9,12 @@ Applications for PLM-APGAS: https://github.com/posnerj/PLM-APGAS
 
 Contains PLM-APGAS as git submodule, so use 
 
-    git clone --recursive-submodules
+    git clone --recurse-submodules
+    
+Please remove "version XXX" in line 2 of file apgas/build.gradle
     
     
 Contact:  
 Jonas Posner  
 University of Kassel, Germany  
-http://www.uni-kassel.de/eecs/de/fachgebiete/plm/team/jonas-posner.html
+http://www.uni-kassel.de/go/jposner
