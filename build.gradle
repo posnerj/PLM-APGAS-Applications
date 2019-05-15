@@ -6,7 +6,7 @@ buildscript {
 
 // remove version in apgas:build.gradle
 plugins {
-    id "com.diffplug.gradle.spotless" version "3.10.0"
+    id "com.diffplug.gradle.spotless" version "3.28.1"
 }
 
 
@@ -70,6 +70,7 @@ task copyToBin(type: Copy) {
 spotless {
     java {
         googleJavaFormat("1.5")
+        licenseHeaderFile 'spotless.license.java'
     }
 }
 
