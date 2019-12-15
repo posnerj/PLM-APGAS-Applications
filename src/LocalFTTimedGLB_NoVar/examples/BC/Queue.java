@@ -4,23 +4,23 @@
  * You may obtain a copy of the License at
  * http://www.opensource.org/licenses/eclipse-1.0.php
  */
-package GLBCoop.examples.BC;
+package LocalFTTimedGLB_NoVar.examples.BC;
 
 import static apgas.Constructs.here;
 import static apgas.Constructs.places;
 
-import GLBCoop.GLBResult;
-import GLBCoop.TaskBag;
-import GLBCoop.TaskQueue;
+import GLBCoop.examples.BC.BC;
+import LocalFTTimedGLB_NoVar.LocalFTGLBResult;
+import LocalFTTimedGLB_NoVar.LocalFTTaskBag;
+import LocalFTTimedGLB_NoVar.LocalFTTaskQueue;
 import utils.Rmat;
 
-public class Queue extends BC implements TaskQueue<Queue, Double> {
-
+public class Queue extends BC implements LocalFTTaskQueue<Queue, Double> {
   public int[] lower;
   public int[] upper;
+  protected int size;
   public int state = 0;
   public int s;
-  protected int size;
 
   public Queue(Rmat rmat, int permute, int numPlaces) {
     super(rmat, permute);
@@ -49,6 +49,7 @@ public class Queue extends BC implements TaskQueue<Queue, Double> {
 
     switch (state) {
       case 0:
+        if (this.size == 0) return false;
         int top = this.size - 1;
         final int l = this.lower[top];
         final int u = this.upper[top] - 1;
@@ -108,7 +109,7 @@ public class Queue extends BC implements TaskQueue<Queue, Double> {
   }
 
   @Override
-  public TaskBag split() {
+  public LocalFTTaskBag split() {
     int s = 0;
     for (int i = 0; i < this.size; ++i) {
       if (2 <= (this.upper[i] - this.lower[i])) {
@@ -136,6 +137,15 @@ public class Queue extends BC implements TaskQueue<Queue, Double> {
     return (bag);
   }
 
+  @Override
+  public LocalFTTaskBag getAllTasks() {
+    final int s = this.size();
+    Bag bag = new Bag(s);
+    System.arraycopy(this.lower, 0, bag.lower, 0, s);
+    System.arraycopy(this.upper, 0, bag.upper, 0, s);
+    return bag;
+  }
+
   public void merge(Bag bag) {
     int bagSize = bag.size();
     int thisSize = this.size;
@@ -151,11 +161,11 @@ public class Queue extends BC implements TaskQueue<Queue, Double> {
   }
 
   @Override
-  public void merge(TaskBag taskBag) {
+  public void merge(LocalFTTaskBag taskBag) {
     this.merge((Bag) taskBag);
   }
 
-  public void merge(TaskQueue<Queue, Double> other) {
+  public void merge(LocalFTTaskQueue<Queue, Double> other) {
     this.merge((Queue) other);
   }
 
@@ -176,22 +186,6 @@ public class Queue extends BC implements TaskQueue<Queue, Double> {
   }
 
   @Override
-  public void mergeResult(TaskQueue<Queue, Double> other) {
-    this.mergeResult((Queue) other);
-  }
-
-  public void mergeResult(Queue other) {
-    for (int i = 0; i < other.realBetweennessMap.length; ++i) {
-      this.realBetweennessMap[i] += other.realBetweennessMap[i];
-    }
-  }
-
-  @Override
-  public long count() {
-    return this.count;
-  }
-
-  @Override
   public int size() {
     return this.size;
   }
@@ -203,20 +197,25 @@ public class Queue extends BC implements TaskQueue<Queue, Double> {
   }
 
   @Override
-  public GLBResult<Double> getResult() {
+  public LocalFTGLBResult<Double> getResult() {
     BCGResult result = new BCGResult();
     return result;
   }
 
-  public class BCGResult extends GLBResult<Double> {
+  public class BCGResult extends LocalFTGLBResult<Double> {
+    public final double[] result;
+
+    public BCGResult() {
+      this.result = realBetweennessMap.clone();
+    }
 
     @Override
     public Double[] getResult() {
-      Double[] result = new Double[realBetweennessMap.length];
-      for (int i = 0; i < realBetweennessMap.length; i++) {
-        result[i] = realBetweennessMap[i];
+      Double[] r = new Double[result.length];
+      for (int i = 0; i < result.length; ++i) {
+        r[i] = this.result[i];
       }
-      return result;
+      return r;
     }
 
     @Override
@@ -227,5 +226,18 @@ public class Queue extends BC implements TaskQueue<Queue, Double> {
         }
       }
     }
+
+    @Override
+    public void mergeResult(LocalFTGLBResult<Double> other) {
+      final BCGResult otherResult = (BCGResult) other;
+      for (int i = 0; i < this.result.length; i++) {
+        this.result[i] += otherResult.result[i];
+      }
+    }
+  }
+
+  @Override
+  public void clearResult() {
+    this.realBetweennessMap = new double[this.N];
   }
 }

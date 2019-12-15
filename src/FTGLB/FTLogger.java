@@ -284,7 +284,7 @@ public class FTLogger implements Serializable {
 
   public void collect(FTLogger logs[]) {
     for (FTLogger l : logs) {
-      add(l);
+      if (l != null) add(l);
     }
   }
 

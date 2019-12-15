@@ -51,12 +51,9 @@ public class BC implements Serializable {
 
   public BC(Rmat rmat, int permute) {
     this.graph = rmat.generate();
-    //    System.out.println(graph);
     this.graph.compress();
     this.N = this.graph.numVertices();
-    System.out.println("numVertices: " + this.N);
     this.M = this.graph.numEdges();
-    System.out.println("numEdges: " + this.M);
     this.verticesToWorkOn = new int[N];
     Arrays.setAll(this.verticesToWorkOn, i -> i); // i is the array index
     if (permute > 0) {
@@ -97,7 +94,7 @@ public class BC implements Serializable {
     CommandLine cmd;
     try {
       cmd = parser.parse(options, args);
-      int seed = Integer.parseInt(cmd.getOptionValue("timestamps", "2"));
+      int seed = Integer.parseInt(cmd.getOptionValue("seed", "2"));
       int n = Integer.parseInt(cmd.getOptionValue("n", "14"));
       double a = Double.parseDouble(cmd.getOptionValue("a", "0.55"));
       double b = Double.parseDouble(cmd.getOptionValue("b", "0.1"));
